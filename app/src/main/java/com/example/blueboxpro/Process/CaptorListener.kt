@@ -18,33 +18,69 @@ class CaptorListener(
     private val fusedLocationClient = LocationServices.getFusedLocationProviderClient(context)
     private var lastTimestamp = 0L
 
+    // Données pour la boussole
+    private val gravityData = FloatArray(3)
+    private val geomagneticData = FloatArray(3)
+    private var hasGravity = false
+    private var hasGeomagnetic = false
+
     private val sensorEventListener = object : SensorEventListener {
         override fun onSensorChanged(event: SensorEvent?) {
-            if (event?.sensor?.type == Sensor.TYPE_LINEAR_ACCELERATION) {
-                val dt = if (lastTimestamp != 0L) (event.timestamp - lastTimestamp) / 1_000_000_000f else 0f
-                lastTimestamp = event.timestamp
+            when (event?.sensor?.type) {
+                Sensor.TYPE_LINEAR_ACCELERATION -> {
+                    val dt = if (lastTimestamp != 0L) (event.timestamp - lastTimestamp) / 1_000_000_000f else 0f
+                    lastTimestamp = event.timestamp
 
-                processor.processAcceleration(
-                    event.values[0],
-                    event.values[1],
-                    event.values[2],
-                    dt
-                )
-                onDataUpdated()
+                    processor.processAcceleration(
+                        event.values[0],
+                        event.values[1],
+                        event.values[2],
+                        dt
+                    )
+                    onDataUpdated()
+                }
+                Sensor.TYPE_ACCELEROMETER -> {
+                    System.arraycopy(event.values, 0, gravityData, 0, 3)
+                    hasGravity = true
+                    updateCompass()
+                }
+                Sensor.TYPE_MAGNETIC_FIELD -> {
+                    System.arraycopy(event.values, 0, geomagneticData, 0, 3)
+                    hasGeomagnetic = true
+                    updateCompass()
+                }
             }
         }
         override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}
+    }
+
+    private fun updateCompass() {
+        if (hasGravity && hasGeomagnetic) {
+            val r = FloatArray(9)
+            val i = FloatArray(9)
+            if (SensorManager.getRotationMatrix(r, i, gravityData, geomagneticData)) {
+                val orientation = FloatArray(3)
+                SensorManager.getOrientation(r, orientation)
+                
+                // azimuth est en radians, conversion en degrés (0-360)
+                var azimuthDeg = Math.toDegrees(orientation[0].toDouble()).toFloat()
+                if (azimuthDeg < 0) azimuthDeg += 360f
+                
+                processor.updateOrientation(azimuthDeg, onDataUpdated)
+            }
+        }
     }
 
     private val locationCallback = object : LocationCallback() {
         override fun onLocationResult(locationResult: LocationResult) {
             locationResult.lastLocation?.let { loc ->
                 processor.updateWithGPS(
-                    loc.latitude, 
-                    loc.longitude,
-                    loc.altitude,
-                    if (loc.hasSpeed()) loc.speed else 0f,
-                    onDataUpdated
+                    lat = loc.latitude, 
+                    lon = loc.longitude,
+                    alt = loc.altitude,
+                    gpsS = if (loc.hasSpeed()) loc.speed else 0f,
+                    gpsBearing = if (loc.hasBearing()) loc.bearing else 0f,
+                    onUpdate = onDataUpdated
                 )
             }
         }
@@ -52,7 +88,12 @@ class CaptorListener(
 
     fun start() {
         val linearAccel = sensorManager.getDefaultSensor(Sensor.TYPE_LINEAR_ACCELERATION)
+        val accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
+        val magnetometer = sensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD)
+
         sensorManager.registerListener(sensorEventListener, linearAccel, SensorManager.SENSOR_DELAY_GAME)
+        sensorManager.registerListener(sensorEventListener, accelerometer, SensorManager.SENSOR_DELAY_UI)
+        sensorManager.registerListener(sensorEventListener, magnetometer, SensorManager.SENSOR_DELAY_UI)
         
         requestLocationUpdates()
     }

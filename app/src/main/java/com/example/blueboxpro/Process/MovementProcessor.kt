@@ -14,11 +14,22 @@ class MovementProcessor {
     var speedIMU: Float = 0f
     var speedGPS: Float = 0f
     var speedFused: Float = 0f
+    private val speeds = FloatArray(10)
+    var moyspeed: Float = 0f
+
     var altitude: Double = 0.0
     var lastLocation: GeoPoint? = null
 
-    // Seuil de vitesse (offset) pour ignorer le bruit à l'arrêt
-    private val speedThreshold = 1.0f
+    // SOG (Speed Over Ground) et COG (Course Over Ground)
+    var sog: Float = 0f // Vitesse fond (souvent en m/s ou nœuds)
+    var cog: Float = 0f // Route fond (en degrés 0-360)
+    
+    // Boussole (Compass)
+    var azimuth: Float = 0f // Orientation du téléphone par rapport au Nord magnétique
+
+    // Seuils de vitesse (offsets) différents pour l'IMU et le GPS
+    private val speedThresholdIMU = 1.0f
+    private val speedThresholdGPS = 1.0f
 
     fun processAcceleration(ax: Float, ay: Float, az: Float, dt: Float) {
         accelX = ax
@@ -30,15 +41,31 @@ class MovementProcessor {
         kalmanZ.predict(az, dt)
 
         val rawSpeedIMU = sqrt(kalmanX.x * kalmanX.x + kalmanY.x * kalmanY.x + kalmanZ.x * kalmanZ.x)
-        speedIMU = if (rawSpeedIMU < speedThreshold) 0f else rawSpeedIMU
-        speedFused = if (rawSpeedIMU < speedThreshold) 0f else rawSpeedIMU
+        speedIMU = if (rawSpeedIMU < speedThresholdIMU) 0f else rawSpeedIMU
+        // La vitesse fusionnée suit initialement le seuil de l'IMU avant correction GPS
+        speedFused = if (rawSpeedIMU < speedThresholdIMU) 0f else rawSpeedIMU
+        // Moyenne des 5 dernières vitesses
+        speeds.forEachIndexed { index, _ ->
+            if (index < speeds.size - 1) {
+                speeds[index] = speeds[index + 1]
+            }
+        }
+        speeds[speeds.size - 1] = speedFused
+        moyspeed = speeds.average().toFloat()
+        sog = moyspeed
     }
 
-    fun updateWithGPS(lat: Double, lon: Double, alt: Double, gpsS: Float, onUpdate: () -> Unit) {
+    fun updateWithGPS(lat: Double, lon: Double, alt: Double, gpsS: Float, gpsBearing: Float, onUpdate: () -> Unit) {
         lastLocation = GeoPoint(lat, lon)
         altitude = alt
-        speedGPS = if (gpsS < speedThreshold) 0f else gpsS
+        speedGPS = if (gpsS < speedThresholdGPS) 0f else gpsS
         
+        // Le COG (Course Over Ground) est donné par le 'bearing' du GPS
+        // On ne met à jour le COG que si on bouge suffisamment pour avoir une direction fiable
+        if (gpsS > speedThresholdGPS) {
+            cog = gpsBearing
+        }
+
         val currentIMUSpeed = sqrt(kalmanX.x * kalmanX.x + kalmanY.x * kalmanY.x + kalmanZ.x * kalmanZ.x)
         if (currentIMUSpeed > 0.1f) {
             val ratio = gpsS / currentIMUSpeed
@@ -52,8 +79,25 @@ class MovementProcessor {
         }
         
         val rawSpeedFused = sqrt(kalmanX.x * kalmanX.x + kalmanY.x * kalmanY.x + kalmanZ.x * kalmanZ.x)
-        speedFused = if (rawSpeedFused < speedThreshold) 0f else rawSpeedFused
+        speedFused = if (rawSpeedFused < speedThresholdGPS) 0f else rawSpeedFused
         
+        // SOG est mis à jour avec la vitesse finale fusionnée
+
+
+        // Moyenne des 5 dernières vitesses
+        speeds.forEachIndexed { index, _ ->
+            if (index < speeds.size - 1) {
+                speeds[index] = speeds[index + 1]
+            }
+        }
+        speeds[speeds.size - 1] = speedFused
+        moyspeed = speeds.average().toFloat()
+        sog = moyspeed
+        onUpdate()
+    }
+
+    fun updateOrientation(azimuth: Float, onUpdate: () -> Unit) {
+        this.azimuth = azimuth
         onUpdate()
     }
 
@@ -67,6 +111,10 @@ class MovementProcessor {
         speedIMU = 0f
         speedGPS = 0f
         speedFused = 0f
+        sog = 0f
+        cog = 0f
+        azimuth = 0f
+        moyspeed = 0f
         altitude = 0.0
     }
 }

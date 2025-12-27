@@ -45,16 +45,18 @@ class MainActivity : ComponentActivity() {
 
         enableEdgeToEdge()
         setContent {
-            // États des paramètres globaux
+            val context = LocalContext.current
+            
+            // 1. États globaux (Thème et Unités)
             var isDarkMode by remember { mutableStateOf(false) }
             var unitSystem by remember { mutableStateOf("Métrique (m/s, km/h)") }
             var language by remember { mutableStateOf("Français") }
 
-            // 1. Centralisation de l'état et du processeur au niveau de l'activité
+            // 2. Initialisation du Cœur Logique au plus haut niveau
+            // Pour que les capteurs ne s'arrêtent JAMAIS lors de la navigation
             val processor = remember { MovementProcessor() }
             var lastLocationState by remember { mutableStateOf<GeoPoint?>(null) }
             var refreshTrigger by remember { mutableStateOf(0) }
-            val context = LocalContext.current
 
             val captorListener = remember {
                 CaptorListener(context, processor) {
@@ -70,7 +72,7 @@ class MainActivity : ComponentActivity() {
                 }
             }
 
-            // Demande de permission
+            // Permission GPS
             val permissionLauncher = rememberLauncherForActivityResult(
                 contract = ActivityResultContracts.RequestMultiplePermissions()
             ) { }
@@ -93,11 +95,11 @@ class MainActivity : ComponentActivity() {
                             processor = processor,
                             lastLocationState = lastLocationState,
                             refreshTrigger = refreshTrigger,
+                            unitSystem = unitSystem,
+                            language = language,
                             isDarkMode = isDarkMode,
                             onDarkModeChange = { isDarkMode = it },
-                            unitSystem = unitSystem,
                             onUnitSystemChange = { unitSystem = it },
-                            language = language,
                             onLanguageChange = { language = it },
                             onOpenFullScreenMap = { rootNavController.navigate("full_map") }
                         )
@@ -119,11 +121,11 @@ fun MainScreen(
     processor: MovementProcessor,
     lastLocationState: GeoPoint?,
     refreshTrigger: Int,
+    unitSystem: String,
+    language: String,
     isDarkMode: Boolean,
     onDarkModeChange: (Boolean) -> Unit,
-    unitSystem: String,
     onUnitSystemChange: (String) -> Unit,
-    language: String,
     onLanguageChange: (String) -> Unit,
     onOpenFullScreenMap: () -> Unit
 ) {
