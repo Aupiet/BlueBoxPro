@@ -14,12 +14,16 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
@@ -27,6 +31,7 @@ import com.example.blueboxpro.Process.CaptorListener
 import com.example.blueboxpro.Process.MovementProcessor
 import com.example.blueboxpro.pages.Page1
 import com.example.blueboxpro.pages.Page2
+import com.example.blueboxpro.pages.Page3
 import com.example.blueboxpro.pages.Page4
 import com.example.blueboxpro.pages.SettingsPage
 import com.example.blueboxpro.ui.theme.BlueBoxProTheme
@@ -43,17 +48,21 @@ class MainActivity : ComponentActivity() {
             androidx.preference.PreferenceManager.getDefaultSharedPreferences(applicationContext)
         )
 
+        // Configuration pour cacher uniquement la barre de navigation système
+        WindowCompat.setDecorFitsSystemWindows(window, false)
+        val controller = WindowCompat.getInsetsController(window, window.decorView)
+        controller.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+        // On cache la navigation bar mais on laisse la status bar (heure, batterie)
+        controller.hide(WindowInsetsCompat.Type.navigationBars())
+
         enableEdgeToEdge()
         setContent {
             val context = LocalContext.current
             
-            // 1. États globaux (Thème et Unités)
             var isDarkMode by remember { mutableStateOf(false) }
             var unitSystem by remember { mutableStateOf("Métrique (m/s, km/h)") }
             var language by remember { mutableStateOf("Français") }
 
-            // 2. Initialisation du Cœur Logique au plus haut niveau
-            // Pour que les capteurs ne s'arrêtent JAMAIS lors de la navigation
             val processor = remember { MovementProcessor() }
             var lastLocationState by remember { mutableStateOf<GeoPoint?>(null) }
             var refreshTrigger by remember { mutableStateOf(0) }
@@ -72,7 +81,6 @@ class MainActivity : ComponentActivity() {
                 }
             }
 
-            // Permission GPS
             val permissionLauncher = rememberLauncherForActivityResult(
                 contract = ActivityResultContracts.RequestMultiplePermissions()
             ) { }
@@ -107,6 +115,7 @@ class MainActivity : ComponentActivity() {
                     composable("full_map") {
                         Page4(
                             location = lastLocationState,
+                            //refreshTrigger = refreshTrigger,
                             onBack = { rootNavController.popBackStack() }
                         )
                     }
@@ -129,12 +138,13 @@ fun MainScreen(
     onLanguageChange: (String) -> Unit,
     onOpenFullScreenMap: () -> Unit
 ) {
-    val pagerState = rememberPagerState(pageCount = { 3 })
+    val pagerState = rememberPagerState(pageCount = { 4 })
     val scope = rememberCoroutineScope()
     
     val tabs = listOf(
         TabItem("Analyse", Icons.Default.Home),
         TabItem("Carte", Icons.Default.LocationOn),
+        TabItem("Cours", Icons.Default.PlayArrow),
         TabItem("Réglages", Icons.Default.Settings)
     )
 
@@ -167,7 +177,7 @@ fun MainScreen(
                     processor = processor,
                     refreshTrigger = refreshTrigger,
                     onNavigateToMap = { scope.launch { pagerState.animateScrollToPage(1) } },
-                    onNavigateToSettings = { scope.launch { pagerState.animateScrollToPage(2) } }
+                    onNavigateToSettings = { scope.launch { pagerState.animateScrollToPage(3) } }
                 )
                 1 -> Page2(
                     location = lastLocationState,
@@ -175,7 +185,8 @@ fun MainScreen(
                     onBack = { scope.launch { pagerState.animateScrollToPage(0) } },
                     onOpenFullScreenMap = onOpenFullScreenMap
                 )
-                2 -> SettingsPage(
+                2 -> Page3()
+                3 -> SettingsPage(
                     isDarkMode = isDarkMode,
                     onDarkModeChange = onDarkModeChange,
                     unitSystem = unitSystem,

@@ -65,7 +65,6 @@ class CaptorListener(
                 // azimuth est en radians, conversion en degrés (0-360)
                 var azimuthDeg = Math.toDegrees(orientation[0].toDouble()).toFloat()
                 if (azimuthDeg < 0) azimuthDeg += 360f
-                
                 processor.updateOrientation(azimuthDeg, onDataUpdated)
             }
         }

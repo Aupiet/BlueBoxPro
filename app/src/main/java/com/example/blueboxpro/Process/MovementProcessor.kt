@@ -1,12 +1,14 @@
 package com.example.blueboxpro.Process
 
 import org.osmdroid.util.GeoPoint
+import kotlin.math.round
 import kotlin.math.sqrt
 
 class MovementProcessor {
     val kalmanX = SimpleKalmanFilter()
     val kalmanY = SimpleKalmanFilter()
     val kalmanZ = SimpleKalmanFilter()
+
 
     var accelX: Float = 0f
     var accelY: Float = 0f
@@ -26,6 +28,8 @@ class MovementProcessor {
     
     // Boussole (Compass)
     var azimuth: Float = 0f // Orientation du téléphone par rapport au Nord magnétique
+    private val azarray = FloatArray(3)
+    var moyaz: Float = 0f
 
     // Seuils de vitesse (offsets) différents pour l'IMU et le GPS
     private val speedThresholdIMU = 1.0f
@@ -97,7 +101,15 @@ class MovementProcessor {
     }
 
     fun updateOrientation(azimuth: Float, onUpdate: () -> Unit) {
-        this.azimuth = azimuth
+        this.azimuth = round( azimuth )
+        azarray.forEachIndexed { index, _ ->
+            if (index < azarray.size - 1) {
+                azarray[index] = azarray[index + 1]
+            }
+            azarray[azarray.size - 1] = azimuth
+            moyaz = azarray.average().toFloat()
+            moyaz = round(moyaz)
+        }
         onUpdate()
     }
 

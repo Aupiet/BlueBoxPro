@@ -1,45 +1,48 @@
-# BlueBoxPro - Version Pre Alpha 0.1.1
+# BlueBoxPro - Version Pre Alpha 0.1.2
 
 BlueBoxPro est une application Android performante conçue pour l'analyse de mouvement et la visualisation cartographique en temps réel, utilisant Jetpack Compose et Material 3.
 
-## Nouveautés de la version 0.1.1 (vs 0.1.0)
+## Nouveautés de la version 0.1.2 (vs 0.1.1)
 
-*   **Persistance Globale** : Les capteurs et le GPS ne s'arrêtent plus lors de la navigation entre les pages grâce à une initialisation centralisée dans l'activité principale.
-*   **Réactivité accrue** : Actualisation du SOG (vitesse) à 30Hz via l'accéléromètre, corrigée périodiquement par le GPS.
-*   **Boussole et Topographie** : Ajout de l'affichage de l'Azimuth (orientation magnétique) et de l'Altitude.
-*   **Mode Carte Étendu** : Passage en mode plein écran interactif avec bouton de recentrage manuel.
-*   **Architecture Modulaire** : Restructuration complète du code avec un fichier par écran et une séparation nette entre logique de calcul et interface.
+*   **Enregistrement de Session (Page 3)** : Ajout d'un nouvel onglet "Cours" dédié au suivi et à la sauvegarde des parcours. Gestion centralisée des sessions via un gestionnaire dédié.
+*   **Boussole Haute Précision** : L'Azimuth est désormais arondie à l'entier le plus proche.
+*   **Mode Immersif Avancé** : Implémentation du comportement "Swipe to show bars". La barre de navigation système est masquée pour maximiser l'espace, tandis que la barre de statut (heure, batterie) reste visible.
+*   **Affichage SOG & COG** : Intégration du Speed Over Ground (Vitesse fond) et du Course Over Ground (Route fond) directement sur le tableau de bord principal.
+*   **Optimisation de l'Interface** : Correction des chevauchements sur la Page 2 grâce à un nouveau layout structuré et ajout du support du défilement (Scroll) sur les pages denses.
 
 ## Fonctionnalités Actuelles
 
 ### 1. Analyse de Mouvement Avancée
-*   **Vitesse Haute Fréquence (30Hz)** : Le SOG (Speed Over Ground) s'actualise en temps réel via l'IMU pour une fluidité maximale.
-*   **Fusion IMU/GPS (Kalman)** : Correction automatique de la dérive de l'accéléromètre par le GPS avec un système de confiance dynamique (plus l'écart est faible, plus le GPS est écouté).
-*   **Boussole Magnétique** : Affichage de l'Azimuth (orientation du téléphone) via les capteurs de champ magnétique.
-*   **COG (Course Over Ground)** : Direction réelle du mouvement calculée par le GPS (actif au-dessus de 1.0 m/s).
-*   **Filtres de Bruit Intelligents** : Seuils de vitesse distincts pour l'IMU (0.5 m/s) et le GPS (0.8 m/s) pour une stabilité parfaite à l'arrêt.
+*   **Vitesse Haute Fréquence (30Hz)** : Le SOG s'actualise en temps réel via l'IMU pour une fluidité maximale.
+*   **Fusion IMU/GPS (Kalman)** : Correction automatique de la dérive par le GPS avec un système de confiance dynamique basé sur l'écart de vitesse.
+*   **Boussole Filtrée** : Affichage de l'orientation magnétique stabilisée par Kalman.
+*   **Données Multi-sources** : Affichage simultané des vitesses GPS, IMU et fusionnée.
 
 ### 2. Cartographie & Topographie
-*   **Mini-carte Native** : Intégrée en Page 2 avec suivi automatique de la position.
-*   **Exploration Plein Écran (Page 4)** : Mode interactif complet accessible d'un simple clic sur la minicarte.
-*   **Contrôle du Recentrage** : Recentrage manuel sur la grande carte via un bouton dédié pour permettre l'exploration libre.
-*   **Données Topographiques** : Affichage en temps réel de la Latitude, Longitude (précision 6 décimales) et de l'Altitude.
+*   **Mini-carte Native** : Intégrée avec suivi automatique et layout anti-chevauchement.
+*   **Exploration Plein Écran** : Mode interactif complet avec recentrage manuel.
+*   **Topographie** : Lecture en temps réel de l'altitude et des coordonnées GPS (6 décimales).
 
-### 3. Architecture & Navigation
-*   **Persistence des Capteurs** : Le système de capture est global ; les calculs continuent en arrière-plan pendant toute l'utilisation de l'application.
-*   **Navigation Hybride** : Utilisation d'une NavigationBar pour les onglets principaux et d'un HorizontalPager pour le balayage entre pages.
-*   **Code Modulaire** : Séparation entre l'interface (pages), les éléments réutilisables (ui/components) et la logique métier (Process).
+### 3. Gestion des Parcours (En cours)
+*   **Historique des Sessions** : Visualisation des sauvegardes récentes.
+*   **Exportation** : Préparation pour l'exportation des données de course (CSV/GPX).
 
-### 4. Personnalisation (Settings)
-*   **Mode Sombre** : Bascule dynamique sur l'ensemble de l'interface utilisateur.
-*   **Préférences** : Gestion du système d'unités (Métrique/Impérial) et de la langue.
+### 4. Architecture & Navigation
+*   **Persistence Globale** : Les capteurs restent actifs sur l'ensemble des pages et modes d'affichage.
+*   **Navigation à 4 Onglets** : Analyse, Carte, Cours et Réglages.
+*   **Modularité** : Code strictement découpé par fonctionnalité et par écran.
+
+### 5. Personnalisation
+*   **Mode Sombre** : Support intégral du thème sombre.
+*   **Préférences** : Choix des unités (Métrique/Impérial) et de la langue.
 
 ## Structure du Projet
-*   `Process/` : MovementProcessor (Calculs), CaptorListener (Acquisition), SimpleKalmanFilter.
-*   `pages/` : Un fichier .kt dédié par écran (Page1, Page2, Page4, SettingsPage).
-*   `ui/components/` : Interface.kt (Layouts et composants de carte réutilisables).
+*   `Process/` : MovementProcessor, CaptorListener, Filtres de Kalman.
+*   `Save/` : SessionManager (Gestion des données enregistrées).
+*   `pages/` : Page1, Page2, Page3, Page4, SettingsPage.
+*   `ui/components/` : Interface.kt (Composants réutilisables).
 
 ## Permissions requises
-*   `INTERNET` : Chargement des cartes OpenStreetMap.
-*   `ACCESS_FINE_LOCATION` : Position et vitesse GPS de haute précision.
-*   `MAGNETIC_SENSOR` : Fonctionnement de la boussole.
+*   `INTERNET` : Cartographie OpenStreetMap.
+*   `ACCESS_FINE_LOCATION` : GPS de haute précision.
+*   `MAGNETIC_SENSOR` : Orientation.
