@@ -9,7 +9,6 @@ class MovementProcessor {
     val kalmanY = SimpleKalmanFilter()
     val kalmanZ = SimpleKalmanFilter()
 
-
     var accelX: Float = 0f
     var accelY: Float = 0f
     var accelZ: Float = 0f
@@ -21,6 +20,11 @@ class MovementProcessor {
 
     var altitude: Double = 0.0
     var lastLocation: GeoPoint? = null
+    var gpsAccuracy: Float = 0f
+    
+    private var lastGpsUpdateMillis: Long = 0L
+    private val GPS_TIMEOUT_MS = 5000L
+    private val MIN_GPS_ACCURACY = 50f // Précision minimum acceptable en mètres
 
     // SOG (Speed Over Ground) et COG (Course Over Ground)
     var sog: Float = 0f // Vitesse fond (souvent en m/s ou nœuds)
@@ -38,6 +42,8 @@ class MovementProcessor {
     private val speedThresholdGPS = 1.0f
 
     fun processAcceleration(ax: Float, ay: Float, az: Float, dt: Float) {
+        checkGpsTimeout()
+        
         accelX = ax
         accelY = ay
         accelZ = az
@@ -50,7 +56,7 @@ class MovementProcessor {
         speedIMU = if (rawSpeedIMU < speedThresholdIMU) 0f else rawSpeedIMU
         // La vitesse fusionnée suit initialement le seuil de l'IMU avant correction GPS
         speedFused = if (rawSpeedIMU < speedThresholdIMU) 0f else rawSpeedIMU
-        // Moyenne des 5 dernières vitesses
+        // Moyenne des dernières vitesses
         speeds.forEachIndexed { index, _ ->
             if (index < speeds.size - 1) {
                 speeds[index] = speeds[index + 1]
@@ -61,13 +67,28 @@ class MovementProcessor {
         sog = moyspeed
     }
 
-    fun updateWithGPS(lat: Double, lon: Double, alt: Double, gpsS: Float, gpsBearing: Float, onUpdate: () -> Unit) {
+    private fun checkGpsTimeout() {
+        if (lastGpsUpdateMillis != 0L && System.currentTimeMillis() - lastGpsUpdateMillis > GPS_TIMEOUT_MS) {
+            speedGPS = 0f
+            lastGpsUpdateMillis = 0L
+        }
+    }
+
+    fun updateWithGPS(lat: Double, lon: Double, alt: Double, gpsS: Float, gpsBearing: Float, accuracy: Float, onUpdate: () -> Unit) {
+        // On ne traite les données que si la précision est suffisante
+        if (accuracy > MIN_GPS_ACCURACY) {
+            gpsAccuracy = accuracy
+            onUpdate()
+            return
+        }
+
+        lastGpsUpdateMillis = System.currentTimeMillis()
         lastLocation = GeoPoint(lat, lon)
         altitude = alt
         speedGPS = if (gpsS < speedThresholdGPS) 0f else gpsS
+        gpsAccuracy = accuracy
         
         // Le COG (Course Over Ground) est donné par le 'bearing' du GPS
-        // On ne met à jour le COG que si on bouge suffisamment pour avoir une direction fiable
         if (gpsS > speedThresholdGPS) {
             cog = gpsBearing
         }
@@ -87,10 +108,7 @@ class MovementProcessor {
         val rawSpeedFused = sqrt(kalmanX.x * kalmanX.x + kalmanY.x * kalmanY.x + kalmanZ.x * kalmanZ.x)
         speedFused = if (rawSpeedFused < speedThresholdGPS) 0f else rawSpeedFused
         
-        // SOG est mis à jour avec la vitesse finale fusionnée
-
-
-        // Moyenne des 5 dernières vitesses
+        // Moyenne des dernières vitesses
         speeds.forEachIndexed { index, _ ->
             if (index < speeds.size - 1) {
                 speeds[index] = speeds[index + 1]
@@ -101,10 +119,10 @@ class MovementProcessor {
         sog = moyspeed
         onUpdate()
     }
+
     private val ALPHA = 0.15f
     fun updateOrientation(newaz: Float, onUpdate: () -> Unit) {
-        var diffaz: Float = 0f
-        diffaz = newaz - moyaz
+        var diffaz: Float = newaz - moyaz
 
         while (diffaz < -180f) diffaz += 360f
         while (diffaz > 180f) diffaz -= 360f
@@ -113,8 +131,7 @@ class MovementProcessor {
 
         if (moyaz < 0) moyaz += 360f
         if (moyaz >= 360) moyaz -= 360f
-        this.moyaz = round(moyaz)
-
+        azimuth = round(moyaz)
         onUpdate()
     }
 
@@ -133,5 +150,7 @@ class MovementProcessor {
         azimuth = 0f
         moyspeed = 0f
         altitude = 0.0
+        gpsAccuracy = 0f
+        lastGpsUpdateMillis = 0L
     }
 }

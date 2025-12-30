@@ -53,7 +53,7 @@ fun Page1(
             // Affichage de la Boussole (Compass)
             Text(text = "Boussole (Orientation)", style = MaterialTheme.typography.titleMedium)
             Text(
-                text = "${"%.1f".format(processor.moyaz)}°",
+                text = "${"%.1f".format(processor.azimuth)}°",
                 style = MaterialTheme.typography.headlineMedium,
                 color = MaterialTheme.colorScheme.tertiary
             )

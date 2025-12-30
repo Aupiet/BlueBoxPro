@@ -79,6 +79,7 @@ class CaptorListener(
                     alt = loc.altitude,
                     gpsS = if (loc.hasSpeed()) loc.speed else 0f,
                     gpsBearing = if (loc.hasBearing()) loc.bearing else 0f,
+                    accuracy = loc.accuracy,
                     onUpdate = onDataUpdated
                 )
             }

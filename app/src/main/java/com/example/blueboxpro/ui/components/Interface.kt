@@ -49,6 +49,7 @@ object MapComponents {
                     Text(text = "Latitude : ${"%.6f".format(location.latitude)}", style = MaterialTheme.typography.bodyLarge)
                     Text(text = "Longitude : ${"%.6f".format(location.longitude)}", style = MaterialTheme.typography.bodyLarge)
                     Text(text = "Altitude : ${"%.1f".format(processor.altitude)} m", style = MaterialTheme.typography.bodyLarge)
+                    Text(text = "Précision : ${"%.1f".format(processor.gpsAccuracy)} m", style = MaterialTheme.typography.bodyLarge)
                 } else {
                     Text(text = "Recherche GPS...", style = MaterialTheme.typography.bodyLarge)
                 }

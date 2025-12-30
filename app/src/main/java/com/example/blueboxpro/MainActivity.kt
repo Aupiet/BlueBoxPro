@@ -29,6 +29,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.example.blueboxpro.Process.CaptorListener
 import com.example.blueboxpro.Process.MovementProcessor
+import com.example.blueboxpro.pages.AdvancedSettingsPage
 import com.example.blueboxpro.pages.Page1
 import com.example.blueboxpro.pages.Page2
 import com.example.blueboxpro.pages.Page3
@@ -109,13 +110,19 @@ class MainActivity : ComponentActivity() {
                             onDarkModeChange = { isDarkMode = it },
                             onUnitSystemChange = { unitSystem = it },
                             onLanguageChange = { language = it },
-                            onOpenFullScreenMap = { rootNavController.navigate("full_map") }
+                            onOpenFullScreenMap = { rootNavController.navigate("full_map") },
+                            onNavigateToAdvancedSettings = { rootNavController.navigate("advanced_settings") }
                         )
                     }
                     composable("full_map") {
                         Page4(
                             location = lastLocationState,
                             //refreshTrigger = refreshTrigger,
+                            onBack = { rootNavController.popBackStack() }
+                        )
+                    }
+                    composable("advanced_settings") {
+                        AdvancedSettingsPage(
                             onBack = { rootNavController.popBackStack() }
                         )
                     }
@@ -136,7 +143,8 @@ fun MainScreen(
     onDarkModeChange: (Boolean) -> Unit,
     onUnitSystemChange: (String) -> Unit,
     onLanguageChange: (String) -> Unit,
-    onOpenFullScreenMap: () -> Unit
+    onOpenFullScreenMap: () -> Unit,
+    onNavigateToAdvancedSettings: () -> Unit
 ) {
     val pagerState = rememberPagerState(pageCount = { 4 })
     val scope = rememberCoroutineScope()
@@ -192,7 +200,8 @@ fun MainScreen(
                     unitSystem = unitSystem,
                     onUnitSystemChange = onUnitSystemChange,
                     language = language,
-                    onLanguageChange = onLanguageChange
+                    onLanguageChange = onLanguageChange,
+                    onNavigateToAdvancedSettings = onNavigateToAdvancedSettings
                 )
             }
         }

@@ -19,7 +19,8 @@ fun SettingsPage(
     unitSystem: String,
     onUnitSystemChange: (String) -> Unit,
     language: String,
-    onLanguageChange: (String) -> Unit
+    onLanguageChange: (String) -> Unit,
+    onNavigateToAdvancedSettings: () -> Unit
 ) {
     val scrollState = rememberScrollState()
     Column(
@@ -112,6 +113,15 @@ fun SettingsPage(
                     )
                 }
             }
+        }
+
+        Spacer(modifier = Modifier.height(32.dp))
+
+        Button(
+            onClick = onNavigateToAdvancedSettings,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Paramètres Avancés")
         }
 
         Spacer(modifier = Modifier.weight(1f))
