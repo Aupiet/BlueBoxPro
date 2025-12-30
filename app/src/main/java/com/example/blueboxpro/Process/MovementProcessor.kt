@@ -29,6 +29,8 @@ class MovementProcessor {
     // Boussole (Compass)
     var azimuth: Float = 0f // Orientation du téléphone par rapport au Nord magnétique
     private val azarray = FloatArray(3)
+    var newaz: Float = 0f
+
     var moyaz: Float = 0f
 
     // Seuils de vitesse (offsets) différents pour l'IMU et le GPS
@@ -99,17 +101,20 @@ class MovementProcessor {
         sog = moyspeed
         onUpdate()
     }
+    private val ALPHA = 0.15f
+    fun updateOrientation(newaz: Float, onUpdate: () -> Unit) {
+        var diffaz: Float = 0f
+        diffaz = newaz - moyaz
 
-    fun updateOrientation(azimuth: Float, onUpdate: () -> Unit) {
-        this.azimuth = round( azimuth )
-        azarray.forEachIndexed { index, _ ->
-            if (index < azarray.size - 1) {
-                azarray[index] = azarray[index + 1]
-            }
-            azarray[azarray.size - 1] = azimuth
-            moyaz = azarray.average().toFloat()
-            moyaz = round(moyaz)
-        }
+        while (diffaz < -180f) diffaz += 360f
+        while (diffaz > 180f) diffaz -= 360f
+
+        moyaz = (moyaz + ALPHA * diffaz)
+
+        if (moyaz < 0) moyaz += 360f
+        if (moyaz >= 360) moyaz -= 360f
+        this.moyaz = round(moyaz)
+
         onUpdate()
     }
 
