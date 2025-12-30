@@ -10,13 +10,15 @@ import org.osmdroid.util.GeoPoint
 @Composable
 fun Page2(
     location: GeoPoint?, 
-    processor: MovementProcessor, 
+    processor: MovementProcessor,
+    unitSystem: String,
     onBack: () -> Unit,
     onOpenFullScreenMap: () -> Unit
 ) {
     MapComponents.Page2Layout(
         location = location,
         processor = processor,
+        unitSystem = unitSystem,
         onBack = onBack,
         onMapClick = onOpenFullScreenMap
     )

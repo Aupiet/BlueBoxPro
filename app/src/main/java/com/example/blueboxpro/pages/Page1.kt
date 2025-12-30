@@ -14,10 +14,13 @@ import com.example.blueboxpro.Process.MovementProcessor
 fun Page1(
     processor: MovementProcessor,
     refreshTrigger: Int,
+    unitSystem: String,
     onNavigateToMap: () -> Unit,
     onNavigateToSettings: () -> Unit
 ) {
     val scrollState = rememberScrollState()
+    val result = processor.getResult(unitSystem)
+    
     key(refreshTrigger) {
         Column(
             modifier = Modifier
@@ -27,13 +30,13 @@ fun Page1(
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Text(text = "Analyse de mouvement (Page 1)", style = MaterialTheme.typography.headlineSmall)
+            Text(text = "Analyse de mouvement", style = MaterialTheme.typography.headlineSmall)
             Spacer(modifier = Modifier.height(24.dp))
             
             // Affichage du SOG (Speed Over Ground)
             Text(text = "SOG (Vitesse fond)", style = MaterialTheme.typography.titleMedium)
             Text(
-                text = "${"%.2f".format(processor.sog)} m/s", 
+                text = "${"%.2f".format(result.getSog())} ${result.getSpeedUnit()}", 
                 style = MaterialTheme.typography.headlineMedium,
                 color = MaterialTheme.colorScheme.primary
             )
@@ -43,7 +46,7 @@ fun Page1(
             // Affichage du COG (Course Over Ground)
             Text(text = "COG (Route fond)", style = MaterialTheme.typography.titleMedium)
             Text(
-                text = "${"%.1f".format(processor.cog)}°", 
+                text = "${"%.1f".format(result.getCog())}°", 
                 style = MaterialTheme.typography.headlineMedium,
                 color = MaterialTheme.colorScheme.secondary
             )
@@ -53,7 +56,7 @@ fun Page1(
             // Affichage de la Boussole (Compass)
             Text(text = "Boussole (Orientation)", style = MaterialTheme.typography.titleMedium)
             Text(
-                text = "${"%.1f".format(processor.azimuth)}°",
+                text = "${"%.1f".format(result.getAzimuth())}°",
                 style = MaterialTheme.typography.headlineMedium,
                 color = MaterialTheme.colorScheme.tertiary
             )
@@ -61,9 +64,9 @@ fun Page1(
             Spacer(modifier = Modifier.height(32.dp))
             
             Text(text = "Détails techniques :", style = MaterialTheme.typography.labelLarge)
-            Text(text = "Moyenne: ${"%.2f".format(processor.moyspeed)} m/s")
-            Text(text = "GPS: ${"%.2f".format(processor.speedGPS)} m/s")
-            Text(text = "IMU: ${"%.2f".format(processor.speedIMU)} m/s")
+            Text(text = "Moyenne: ${"%.2f".format(result.getMoyspeed())} ${result.getSpeedUnit()}")
+            Text(text = "GPS: ${"%.2f".format(result.getSpeedGPS())} ${result.getSpeedUnit()}")
+            Text(text = "IMU: ${"%.2f".format(result.getSpeedIMU())} ${result.getSpeedUnit()}")
             
             Spacer(modifier = Modifier.height(24.dp))
 

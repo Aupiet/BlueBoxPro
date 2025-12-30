@@ -52,7 +52,7 @@ fun SettingsPage(
             style = MaterialTheme.typography.titleMedium,
             modifier = Modifier.padding(top = 16.dp, bottom = 8.dp)
         )
-        val unitOptions = listOf("Métrique (m/s, km/h)", "Impérial (mph)")
+        val unitOptions = listOf("Métrique (m/s, km/h)", "Impérial (mph, ft)", "Nautique (noeuds, m)")
         Column(Modifier.selectableGroup()) {
             unitOptions.forEach { text ->
                 Row(

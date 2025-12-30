@@ -41,6 +41,30 @@ class MovementProcessor {
     private val speedThresholdIMU = 1.0f
     private val speedThresholdGPS = 1.0f
 
+    fun getResult(unitSystemStr: String): MovementResult {
+        val unitSystem = when {
+            unitSystemStr.contains("Métrique") -> UnitSystem.METRIC
+            unitSystemStr.contains("Impérial") -> UnitSystem.IMPERIAL
+            unitSystemStr.contains("Nautique") -> UnitSystem.NAUTICAL
+            else -> UnitSystem.METRIC
+        }
+        return MovementResult(
+            unitSystem = unitSystem,
+            accelX = accelX,
+            accelY = accelY,
+            accelZ = accelZ,
+            speedIMU = speedIMU,
+            speedGPS = speedGPS,
+            speedFused = speedFused,
+            moyspeed = moyspeed,
+            sog = sog,
+            cog = cog,
+            azimuth = azimuth,
+            altitude = altitude,
+            accuracy = gpsAccuracy
+        )
+    }
+
     fun processAcceleration(ax: Float, ay: Float, az: Float, dt: Float) {
         checkGpsTimeout()
         

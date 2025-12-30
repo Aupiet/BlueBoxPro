@@ -30,9 +30,12 @@ object MapComponents {
     fun Page2Layout(
         location: GeoPoint?,
         processor: MovementProcessor,
+        unitSystem: String,
         onBack: () -> Unit,
         onMapClick: () -> Unit
     ) {
+        val result = processor.getResult(unitSystem)
+        
         Column(
             modifier = Modifier.fillMaxSize(),
             horizontalAlignment = Alignment.CenterHorizontally
@@ -48,8 +51,8 @@ object MapComponents {
                 if (location != null) {
                     Text(text = "Latitude : ${"%.6f".format(location.latitude)}", style = MaterialTheme.typography.bodyLarge)
                     Text(text = "Longitude : ${"%.6f".format(location.longitude)}", style = MaterialTheme.typography.bodyLarge)
-                    Text(text = "Altitude : ${"%.1f".format(processor.altitude)} m", style = MaterialTheme.typography.bodyLarge)
-                    Text(text = "Précision : ${"%.1f".format(processor.gpsAccuracy)} m", style = MaterialTheme.typography.bodyLarge)
+                    Text(text = "Altitude : ${"%.1f".format(result.getAltitude())} ${result.getAltitudeUnit()}", style = MaterialTheme.typography.bodyLarge)
+                    Text(text = "Précision : ${"%.1f".format(result.getAccuracy())} ${result.getAccuracyUnit()}", style = MaterialTheme.typography.bodyLarge)
                 } else {
                     Text(text = "Recherche GPS...", style = MaterialTheme.typography.bodyLarge)
                 }

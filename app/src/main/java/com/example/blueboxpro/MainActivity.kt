@@ -184,12 +184,14 @@ fun MainScreen(
                 0 -> Page1(
                     processor = processor,
                     refreshTrigger = refreshTrigger,
+                    unitSystem = unitSystem,
                     onNavigateToMap = { scope.launch { pagerState.animateScrollToPage(1) } },
                     onNavigateToSettings = { scope.launch { pagerState.animateScrollToPage(3) } }
                 )
                 1 -> Page2(
                     location = lastLocationState,
                     processor = processor,
+                    unitSystem = unitSystem,
                     onBack = { scope.launch { pagerState.animateScrollToPage(0) } },
                     onOpenFullScreenMap = onOpenFullScreenMap
                 )
