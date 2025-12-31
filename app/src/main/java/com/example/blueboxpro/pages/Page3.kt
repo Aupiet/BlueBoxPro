@@ -6,20 +6,45 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.example.blueboxpro.R
 import com.example.blueboxpro.Save.SessionManager
+import com.example.blueboxpro.Process.MovementProcessor
 
 @Composable
-fun Page3() {
+fun Page3(
+    processor: MovementProcessor,
+    refreshTrigger: Int
+) {
     val scrollState = rememberScrollState()
     val sessions = SessionManager.sessions
+    val context = LocalContext.current
+    
+    // On utilise l'état global du SessionManager pour la persistance
+    val currentRecording = SessionManager.activeRecording
+    val isRecording = currentRecording != null
+
+    // Effet pour ajouter des points automatiquement pendant l'enregistrement
+    // Cet effet sera relancé à chaque mise à jour des capteurs (refreshTrigger)
+    LaunchedEffect(refreshTrigger) {
+        if (isRecording) {
+            currentRecording?.addPoint(
+                latitude = processor.lastLocation?.latitude ?: 0.0,
+                longitude = processor.lastLocation?.longitude ?: 0.0,
+                altitude = processor.altitude,
+                sog = processor.sog,
+                cog = processor.cog
+            )
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -37,25 +62,47 @@ fun Page3() {
         // Section Contrôle d'enregistrement
         Card(
             modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+            colors = CardDefaults.cardColors(
+                containerColor = if (isRecording) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.surfaceVariant
+            )
         ) {
             Column(
                 modifier = Modifier.padding(16.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Text(text = stringResource(R.string.new_session), style = MaterialTheme.typography.titleMedium)
+                Text(
+                    text = if (isRecording) "Enregistrement en cours..." else stringResource(R.string.new_session), 
+                    style = MaterialTheme.typography.titleMedium
+                )
+                
+                if (isRecording) {
+                    Text(
+                        text = "Points capturés : ${currentRecording?.points?.size ?: 0}",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+
                 Spacer(modifier = Modifier.height(16.dp))
+                
                 Button(
                     onClick = {
-                        /* TODO Pouvoir démarer l'enregistrement et arrêter l'enregistrement */
-                        // Test : on ajoute une session au clic pour vérifier que ça s'affiche
-                        SessionManager.addSession("12/05/2024", "45 min", "12.4 km")
+                        if (!isRecording) {
+                            SessionManager.startRecording("Session ${sessions.size + 1}")
+                        } else {
+                            SessionManager.stopRecording(context)
+                        }
                     },
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = if (isRecording) ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error) else ButtonDefaults.buttonColors()
                 ) {
-                    Icon(Icons.Default.PlayArrow, contentDescription = null)
+                    Icon(
+                        imageVector = if (isRecording) Icons.Default.Close else Icons.Default.PlayArrow, 
+                        contentDescription = null
+                    )
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text(stringResource(R.string.start_recording))
+                    Text(
+                        text = if (isRecording) stringResource(R.string.stop_recording) else stringResource(R.string.start_recording)
+                    )
                 }
             }
         }
@@ -84,9 +131,9 @@ fun Page3() {
                 )
             }
         } else {
-            sessions.forEach { session ->
+            sessions.reversed().forEach { session ->
                 ListItem(
-                    headlineContent = { Text("${stringResource(R.string.session_id)}${session.id} - ${session.date}") },
+                    headlineContent = { Text("${session.name} - ${session.date}") },
                     supportingContent = { Text("${stringResource(R.string.duration_label)} ${session.duration} | ${stringResource(R.string.distance_label)} ${session.distance}") },
                     trailingContent = {
                         IconButton(onClick = { /* TODO: Export */ }) {

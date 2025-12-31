@@ -33,6 +33,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.example.blueboxpro.Process.CaptorListener
 import com.example.blueboxpro.Process.MovementProcessor
+import com.example.blueboxpro.Save.SessionManager
 import com.example.blueboxpro.pages.*
 import com.example.blueboxpro.ui.theme.BlueBoxProTheme
 import kotlinx.coroutines.launch
@@ -48,6 +49,9 @@ class MainActivity : AppCompatActivity() {
             applicationContext,
             androidx.preference.PreferenceManager.getDefaultSharedPreferences(applicationContext)
         )
+
+        // Chargement initial des sessions
+        SessionManager.loadSessions(this)
 
         WindowCompat.setDecorFitsSystemWindows(window, false)
         val controller = WindowCompat.getInsetsController(window, window.decorView)
@@ -73,10 +77,16 @@ class MainActivity : AppCompatActivity() {
                 }
             }
 
+            LaunchedEffect(refreshTrigger) {
+                SessionManager.updateRecording(processor)
+            }
+
             DisposableEffect(Unit) {
                 captorListener.start()
                 onDispose {
                     captorListener.stop()
+                    // Sauvegarde lors de la fermeture ou destruction de l'activité
+                    SessionManager.saveSessions(this@MainActivity)
                 }
             }
 
@@ -132,6 +142,18 @@ class MainActivity : AppCompatActivity() {
             }
         }
     }
+
+    override fun onStop() {
+        super.onStop()
+        // Sauvegarde additionnelle quand l'app passe en arrière-plan
+        SessionManager.saveSessions(this)
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        // Sauvegarde finale
+        SessionManager.saveSessions(this)
+    }
 }
 
 @Composable
@@ -172,10 +194,10 @@ fun MainScreen(
                             Icon(
                                 imageVector = tab.icon, 
                                 contentDescription = null,
-                                modifier = Modifier.size(32.dp) // Icones agrandies
+                                modifier = Modifier.size(32.dp)
                             ) 
                         },
-                        alwaysShowLabel = false // Désactive l'affichage du label
+                        alwaysShowLabel = false
                     )
                 }
             }
@@ -203,7 +225,10 @@ fun MainScreen(
                     onBack = { scope.launch { pagerState.animateScrollToPage(0) } },
                     onOpenFullScreenMap = onOpenFullScreenMap
                 )
-                2 -> Page3()
+                2 -> Page3(
+                    processor = processor,
+                    refreshTrigger = refreshTrigger
+                )
                 3 -> SettingsPage(
                     isDarkMode = isDarkMode,
                     onDarkModeChange = onDarkModeChange,
