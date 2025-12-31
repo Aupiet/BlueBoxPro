@@ -1,3 +1,52 @@
 <resources>
-    <string name="app_name">BlueBoxPro</string>
+    <string name="app_name" translatable="false">BlueBoxPro</string>
+    
+    <!-- Navigation Tabs -->
+    <string name="tab_home">Home</string>
+    <string name="tab_map">Carte</string>
+    <string name="tab_recording">Enregistrement</string>
+    <string name="tab_settings">Settings</string>
+
+    <!-- Settings Page -->
+    <string name="settings_title">Paramètres</string>
+    <string name="dark_mode">Mode Sombre</string>
+    <string name="unit_system_title">Unités de mesure</string>
+    <string name="unit_metric_kmh">Métrique (km/h, m)</string>
+    <string name="unit_metric_ms">Métrique (m/s, m)</string>
+    <string name="unit_imperial">Impérial (mph, ft)</string>
+    <string name="unit_nautical">Nautique (kn, m)</string>
+    <string name="language_title">Langue</string>
+    <string name="lang_french" translatable="false">Français</string>
+    <string name="lang_english" translatable="false">English</string>
+    <string name="advanced_settings">Paramètres Avancés</string>
+    <string name="version_pre_alpha">Version Pre Alpha</string>
+
+    <!-- Page 1 (Movement Analysis) -->
+    <string name="movement_analysis_title">Analyse de mouvement</string>
+    <string name="sog_label">SOG (Vitesse fond)</string>
+    <string name="cog_label">COG (Route fond)</string>
+    <string name="compass_label">Boussole (Orientation)</string>
+    <string name="technical_details">Détails techniques :</string>
+    <string name="average_label">Moyenne :</string>
+    <string name="gps_label" translatable="false">GPS :</string>
+    <string name="imu_label" translatable="false">IMU :</string>
+    <string name="reset_button">Réinitialiser</string>
+
+    <!-- Page 2 (Map/Navigation) -->
+    <string name="map_title">Navigation Carte</string>
+    <string name="gps_not_available">GPS non disponible</string>
+    <string name="accuracy_label">Précision :</string>
+    <string name="altitude_label">Altitude :</string>
+
+    <!-- Page 3 (Recording) -->
+    <string name="recording_title">Enregistrement de Course</string>
+    <string name="new_session">Nouvelle Session</string>
+    <string name="start_recording">Démarrer l\'enregistrement</string>
+    <string name="recent_saves">Sauvegardes récentes</string>
+    <string name="no_saves">Aucune sauvegarde disponible</string>
+    <string name="session_id">Session #</string>
+    <string name="duration_label">Durée :</string>
+    <string name="distance_label">Distance :</string>
+    <string name="export_label">Exporter</string>
+    <string name="export_info">Les données seront exportées au format CSV ou GPX.</string>
 </resources>

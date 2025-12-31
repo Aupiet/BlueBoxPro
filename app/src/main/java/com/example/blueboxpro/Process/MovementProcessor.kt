@@ -38,15 +38,22 @@ class MovementProcessor {
     var moyaz: Float = 0f
 
     // Seuils de vitesse (offsets) différents pour l'IMU et le GPS
-    private val speedThresholdIMU = 1.0f
-    private val speedThresholdGPS = 1.0f
+    private val speedThresholdIMU = 0.5f
+    private val speedThresholdGPS = 0.5f
+
+    // Paramètres pour ZUPT (Zero Velocity Update) et HPF (High Pass Filter)
+    private val ZUPT_ACCEL_THRESHOLD = 0.15f
+    private var stationaryCount = 0
+    private val STATIONARY_SAMPLES_REQUIRED = 20
+    private val HPF_ALPHA = 0.98f // Filtre passe-haut (leaky integrator) pour limiter la dérive
 
     fun getResult(unitSystemStr: String): MovementResult {
         val unitSystem = when {
-            unitSystemStr.contains("Métrique") -> UnitSystem.METRIC
+            unitSystemStr.contains("km/h") -> UnitSystem.METRIC_KMH
+            unitSystemStr.contains("m/s") -> UnitSystem.METRIC_MS
             unitSystemStr.contains("Impérial") -> UnitSystem.IMPERIAL
             unitSystemStr.contains("Nautique") -> UnitSystem.NAUTICAL
-            else -> UnitSystem.METRIC
+            else -> UnitSystem.METRIC_KMH
         }
         return MovementResult(
             unitSystem = unitSystem,
@@ -71,10 +78,31 @@ class MovementProcessor {
         accelX = ax
         accelY = ay
         accelZ = az
-        
-        kalmanX.predict(ax, dt)
-        kalmanY.predict(ay, dt)
-        kalmanZ.predict(az, dt)
+
+        // Détection de l'immobilité pour ZUPT (Zero Velocity Update)
+        val accelMag = sqrt(ax * ax + ay * ay + az * az)
+        if (accelMag < ZUPT_ACCEL_THRESHOLD) {
+            stationaryCount++
+        } else {
+            stationaryCount = 0
+        }
+
+        if (stationaryCount >= STATIONARY_SAMPLES_REQUIRED) {
+            // L'appareil est immobile, on force les vitesses à zéro pour annuler la dérive
+            kalmanX.x = 0f
+            kalmanY.x = 0f
+            kalmanZ.x = 0f
+        } else {
+            // Intégration de l'accélération via le filtre de Kalman
+            kalmanX.predict(ax, dt)
+            kalmanY.predict(ay, dt)
+            kalmanZ.predict(az, dt)
+
+            // Application d'un filtre passe-haut (intégrateur à fuite) pour limiter la dérive cumulative
+            kalmanX.x *= HPF_ALPHA
+            kalmanY.x *= HPF_ALPHA
+            kalmanZ.x *= HPF_ALPHA
+        }
 
         val rawSpeedIMU = sqrt(kalmanX.x * kalmanX.x + kalmanY.x * kalmanY.x + kalmanZ.x * kalmanZ.x)
         speedIMU = if (rawSpeedIMU < speedThresholdIMU) 0f else rawSpeedIMU
@@ -163,6 +191,7 @@ class MovementProcessor {
         kalmanX.x = 0f
         kalmanY.x = 0f
         kalmanZ.x = 0f
+        stationaryCount = 0
         accelX = 0f
         accelY = 0f
         accelZ = 0f

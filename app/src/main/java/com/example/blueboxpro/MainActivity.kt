@@ -2,13 +2,15 @@ package com.example.blueboxpro
 
 import android.Manifest
 import android.os.Bundle
-import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.app.AppCompatDelegate
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
@@ -21,6 +23,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
+import androidx.core.os.LocaleListCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
@@ -29,18 +33,14 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.example.blueboxpro.Process.CaptorListener
 import com.example.blueboxpro.Process.MovementProcessor
-import com.example.blueboxpro.pages.AdvancedSettingsPage
-import com.example.blueboxpro.pages.Page1
-import com.example.blueboxpro.pages.Page2
-import com.example.blueboxpro.pages.Page3
-import com.example.blueboxpro.pages.Page4
-import com.example.blueboxpro.pages.SettingsPage
+import com.example.blueboxpro.pages.*
 import com.example.blueboxpro.ui.theme.BlueBoxProTheme
 import kotlinx.coroutines.launch
 import org.osmdroid.config.Configuration
 import org.osmdroid.util.GeoPoint
+import java.util.Locale
 
-class MainActivity : ComponentActivity() {
+class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         
@@ -49,20 +49,18 @@ class MainActivity : ComponentActivity() {
             androidx.preference.PreferenceManager.getDefaultSharedPreferences(applicationContext)
         )
 
-        // Configuration pour cacher uniquement la barre de navigation système
         WindowCompat.setDecorFitsSystemWindows(window, false)
         val controller = WindowCompat.getInsetsController(window, window.decorView)
-        controller.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
-        // On cache la navigation bar mais on laisse la status bar (heure, batterie)
-        controller.hide(WindowInsetsCompat.Type.navigationBars())
+        controller?.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+        controller?.hide(WindowInsetsCompat.Type.navigationBars())
 
         enableEdgeToEdge()
         setContent {
             val context = LocalContext.current
             
             var isDarkMode by remember { mutableStateOf(false) }
-            var unitSystem by remember { mutableStateOf("Métrique (m/s, km/h)") }
-            var language by remember { mutableStateOf("Français") }
+            var unitSystemKey by remember { mutableStateOf("METRIC_KMH") }
+            var language by remember { mutableStateOf(if (Locale.getDefault().language == "fr") "Français" else "English") }
 
             val processor = remember { MovementProcessor() }
             var lastLocationState by remember { mutableStateOf<GeoPoint?>(null) }
@@ -104,12 +102,17 @@ class MainActivity : ComponentActivity() {
                             processor = processor,
                             lastLocationState = lastLocationState,
                             refreshTrigger = refreshTrigger,
-                            unitSystem = unitSystem,
+                            unitSystem = unitSystemKey,
                             language = language,
                             isDarkMode = isDarkMode,
                             onDarkModeChange = { isDarkMode = it },
-                            onUnitSystemChange = { unitSystem = it },
-                            onLanguageChange = { language = it },
+                            onUnitSystemChange = { unitSystemKey = it },
+                            onLanguageChange = { newLang ->
+                                language = newLang
+                                val tag = if (newLang == "Français") "fr" else "en"
+                                val appLocale: LocaleListCompat = LocaleListCompat.forLanguageTags(tag)
+                                AppCompatDelegate.setApplicationLocales(appLocale)
+                            },
                             onOpenFullScreenMap = { rootNavController.navigate("full_map") },
                             onNavigateToAdvancedSettings = { rootNavController.navigate("advanced_settings") }
                         )
@@ -117,7 +120,6 @@ class MainActivity : ComponentActivity() {
                     composable("full_map") {
                         Page4(
                             location = lastLocationState,
-                            //refreshTrigger = refreshTrigger,
                             onBack = { rootNavController.popBackStack() }
                         )
                     }
@@ -150,10 +152,10 @@ fun MainScreen(
     val scope = rememberCoroutineScope()
     
     val tabs = listOf(
-        TabItem("Analyse", Icons.Default.Home),
-        TabItem("Carte", Icons.Default.LocationOn),
-        TabItem("Cours", Icons.Default.PlayArrow),
-        TabItem("Réglages", Icons.Default.Settings)
+        TabItem(Icons.Default.Home),
+        TabItem(Icons.Default.LocationOn),
+        TabItem(Icons.Default.PlayArrow),
+        TabItem(Icons.Default.Settings)
     )
 
     Scaffold(
@@ -166,8 +168,14 @@ fun MainScreen(
                         onClick = {
                             scope.launch { pagerState.animateScrollToPage(index) }
                         },
-                        label = { Text(tab.title) },
-                        icon = { Icon(tab.icon, contentDescription = null) }
+                        icon = { 
+                            Icon(
+                                imageVector = tab.icon, 
+                                contentDescription = null,
+                                modifier = Modifier.size(32.dp) // Icones agrandies
+                            ) 
+                        },
+                        alwaysShowLabel = false // Désactive l'affichage du label
                     )
                 }
             }
@@ -210,4 +218,4 @@ fun MainScreen(
     }
 }
 
-data class TabItem(val title: String, val icon: ImageVector)
+data class TabItem(val icon: ImageVector)

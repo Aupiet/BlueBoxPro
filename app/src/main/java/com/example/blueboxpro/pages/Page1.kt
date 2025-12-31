@@ -7,8 +7,10 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.example.blueboxpro.Process.MovementProcessor
+import com.example.blueboxpro.R
 
 @Composable
 fun Page1(
@@ -30,11 +32,11 @@ fun Page1(
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Text(text = "Analyse de mouvement", style = MaterialTheme.typography.headlineSmall)
+            Text(text = stringResource(R.string.movement_analysis_title), style = MaterialTheme.typography.headlineSmall)
             Spacer(modifier = Modifier.height(24.dp))
             
             // Affichage du SOG (Speed Over Ground)
-            Text(text = "SOG (Vitesse fond)", style = MaterialTheme.typography.titleMedium)
+            Text(text = stringResource(R.string.sog_label), style = MaterialTheme.typography.titleMedium)
             Text(
                 text = "${"%.2f".format(result.getSog())} ${result.getSpeedUnit()}", 
                 style = MaterialTheme.typography.headlineMedium,
@@ -44,7 +46,7 @@ fun Page1(
             Spacer(modifier = Modifier.height(16.dp))
             
             // Affichage du COG (Course Over Ground)
-            Text(text = "COG (Route fond)", style = MaterialTheme.typography.titleMedium)
+            Text(text = stringResource(R.string.cog_label), style = MaterialTheme.typography.titleMedium)
             Text(
                 text = "${"%.1f".format(result.getCog())}°", 
                 style = MaterialTheme.typography.headlineMedium,
@@ -54,7 +56,7 @@ fun Page1(
             Spacer(modifier = Modifier.height(16.dp))
 
             // Affichage de la Boussole (Compass)
-            Text(text = "Boussole (Orientation)", style = MaterialTheme.typography.titleMedium)
+            Text(text = stringResource(R.string.compass_label), style = MaterialTheme.typography.titleMedium)
             Text(
                 text = "${"%.1f".format(result.getAzimuth())}°",
                 style = MaterialTheme.typography.headlineMedium,
@@ -63,15 +65,15 @@ fun Page1(
             
             Spacer(modifier = Modifier.height(32.dp))
             
-            Text(text = "Détails techniques :", style = MaterialTheme.typography.labelLarge)
-            Text(text = "Moyenne: ${"%.2f".format(result.getMoyspeed())} ${result.getSpeedUnit()}")
-            Text(text = "GPS: ${"%.2f".format(result.getSpeedGPS())} ${result.getSpeedUnit()}")
-            Text(text = "IMU: ${"%.2f".format(result.getSpeedIMU())} ${result.getSpeedUnit()}")
+            Text(text = stringResource(R.string.technical_details), style = MaterialTheme.typography.labelLarge)
+            Text(text = "${stringResource(R.string.average_label)} ${"%.2f".format(result.getMoyspeed())} ${result.getSpeedUnit()}")
+            Text(text = "${stringResource(R.string.gps_label)} ${"%.2f".format(result.getSpeedGPS())} ${result.getSpeedUnit()}")
+            Text(text = "${stringResource(R.string.imu_label)} ${"%.2f".format(result.getSpeedIMU())} ${result.getSpeedUnit()}")
             
             Spacer(modifier = Modifier.height(24.dp))
 
             Button(onClick = { processor.reset() }) {
-                Text("Réinitialiser")
+                Text(stringResource(R.string.reset_button))
             }
         }
     }

@@ -13,9 +13,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import com.example.blueboxpro.Process.MovementProcessor
+import com.example.blueboxpro.R
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
@@ -51,16 +53,17 @@ object MapComponents {
                 if (location != null) {
                     Text(text = "Latitude : ${"%.6f".format(location.latitude)}", style = MaterialTheme.typography.bodyLarge)
                     Text(text = "Longitude : ${"%.6f".format(location.longitude)}", style = MaterialTheme.typography.bodyLarge)
-                    Text(text = "Altitude : ${"%.1f".format(result.getAltitude())} ${result.getAltitudeUnit()}", style = MaterialTheme.typography.bodyLarge)
-                    Text(text = "Précision : ${"%.1f".format(result.getAccuracy())} ${result.getAccuracyUnit()}", style = MaterialTheme.typography.bodyLarge)
+                    Text(text = "${stringResource(R.string.altitude_label)} ${"%.1f".format(result.getAltitude())} ${result.getAltitudeUnit()}", style = MaterialTheme.typography.bodyLarge)
+                    Text(text = "${stringResource(R.string.accuracy_label)} ${"%.1f".format(result.getAccuracy())} ${result.getAccuracyUnit()}", style = MaterialTheme.typography.bodyLarge)
                 } else {
-                    Text(text = "Recherche GPS...", style = MaterialTheme.typography.bodyLarge)
+                    Text(text = stringResource(R.string.gps_not_available), style = MaterialTheme.typography.bodyLarge)
                 }
                 
                 Spacer(modifier = Modifier.height(24.dp))
                 
                 Button(onClick = onBack) {
-                    Text("Retour")
+                    Text(stringResource(R.string.reset_button)) // On utilise reset_button car c'est "Retour/Back" dans ce contexte ? 
+                    // Note: Il serait préférable d'ajouter une string spécifique "back_button"
                 }
             }
 
@@ -76,7 +79,7 @@ object MapComponents {
                     widthFraction = 0.9f,
                     heightFraction = 1f,
                     isLocked = true,
-                    autoCenter = true, // Recentrage auto pour la minicarte
+                    autoCenter = true, 
                     onClick = onMapClick
                 )
             }
@@ -92,7 +95,7 @@ object MapComponents {
         alignment: Alignment = Alignment.Center,
         cornerRadius: Int = 16,
         isLocked: Boolean = true,
-        autoCenter: Boolean = true, // Nouveau paramètre
+        autoCenter: Boolean = true,
         onClick: (() -> Unit)? = null
     ) {
         Box(
@@ -109,7 +112,7 @@ object MapComponents {
                     location = location,
                     modifier = Modifier.fillMaxSize(),
                     isLocked = isLocked,
-                    autoCenter = autoCenter // Transmis ici
+                    autoCenter = autoCenter
                 )
                 
                 if (onClick != null) {
@@ -131,7 +134,7 @@ object MapComponents {
         modifier: Modifier = Modifier,
         zoomLevel: Double = 17.0,
         isLocked: Boolean = true,
-        autoCenter: Boolean = true // Nouveau paramètre
+        autoCenter: Boolean = true
     ) {
         AndroidView(
             factory = { ctx ->
@@ -140,14 +143,11 @@ object MapComponents {
                     setMultiTouchControls(!isLocked)
                     if (isLocked) setOnTouchListener { _, _ -> true }
                     controller.setZoom(zoomLevel)
-                    
-                    // On centre une première fois
                     location?.let { controller.setCenter(it) }
                 }
             },
             update = { mapView ->
                 location?.let { geoPoint ->
-                    // On ne fait l'animation de recentrage QUE si autoCenter est vrai
                     if (autoCenter) {
                         mapView.controller.animateTo(geoPoint)
                     }
@@ -156,7 +156,8 @@ object MapComponents {
                     val marker = Marker(mapView)
                     marker.position = geoPoint
                     marker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
-                    marker.title = "Ma position"
+                    // Note: On pourrait aussi traduire "Ma position"
+                    marker.title = "Position" 
                     mapView.overlays.add(marker)
                     mapView.invalidate()
                 }

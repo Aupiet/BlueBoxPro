@@ -9,8 +9,10 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
+import com.example.blueboxpro.R
 
 @Composable
 fun SettingsPage(
@@ -30,13 +32,13 @@ fun SettingsPage(
             .padding(16.dp)
     ) {
         Text(
-            text = "Paramètres", 
+            text = stringResource(R.string.settings_title), 
             style = MaterialTheme.typography.headlineMedium,
             modifier = Modifier.padding(bottom = 24.dp)
         )
 
         ListItem(
-            headlineContent = { Text("Mode Sombre") },
+            headlineContent = { Text(stringResource(R.string.dark_mode)) },
             trailingContent = {
                 Switch(
                     checked = isDarkMode,
@@ -48,11 +50,18 @@ fun SettingsPage(
         HorizontalDivider()
 
         Text(
-            text = "Unités de mesure",
+            text = stringResource(R.string.unit_system_title),
             style = MaterialTheme.typography.titleMedium,
             modifier = Modifier.padding(top = 16.dp, bottom = 8.dp)
         )
-        val unitOptions = listOf("Métrique (m/s, km/h)", "Impérial (mph, ft)", "Nautique (noeuds, m)")
+        
+        val unitOptions = listOf(
+            stringResource(R.string.unit_metric_kmh),
+            stringResource(R.string.unit_metric_ms),
+            stringResource(R.string.unit_imperial),
+            stringResource(R.string.unit_nautical)
+        )
+        
         Column(Modifier.selectableGroup()) {
             unitOptions.forEach { text ->
                 Row(
@@ -83,31 +92,36 @@ fun SettingsPage(
         HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
 
         Text(
-            text = "Langue",
+            text = stringResource(R.string.language_title),
             style = MaterialTheme.typography.titleMedium,
             modifier = Modifier.padding(top = 8.dp, bottom = 8.dp)
         )
-        val langOptions = listOf("Français", "English")
+        
+        val langOptionsMap = mapOf(
+            "Français" to stringResource(R.string.lang_french),
+            "English" to stringResource(R.string.lang_english)
+        )
+        
         Column(Modifier.selectableGroup()) {
-            langOptions.forEach { text ->
+            langOptionsMap.forEach { (key, label) ->
                 Row(
                     Modifier
                         .fillMaxWidth()
                         .height(48.dp)
                         .selectable(
-                            selected = (text == language),
-                            onClick = { onLanguageChange(text) },
+                            selected = (key == language),
+                            onClick = { onLanguageChange(key) },
                             role = Role.RadioButton
                         )
                         .padding(horizontal = 16.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     RadioButton(
-                        selected = (text == language),
+                        selected = (key == language),
                         onClick = null
                     )
                     Text(
-                        text = text,
+                        text = label,
                         style = MaterialTheme.typography.bodyLarge,
                         modifier = Modifier.padding(start = 16.dp)
                     )
@@ -121,13 +135,13 @@ fun SettingsPage(
             onClick = onNavigateToAdvancedSettings,
             modifier = Modifier.fillMaxWidth()
         ) {
-            Text("Paramètres Avancés")
+            Text(stringResource(R.string.advanced_settings))
         }
 
         Spacer(modifier = Modifier.weight(1f))
         
         Text(
-            text = "Version Pre Alpha",
+            text = stringResource(R.string.version_pre_alpha),
             style = MaterialTheme.typography.bodySmall,
             modifier = Modifier.align(Alignment.CenterHorizontally).padding(bottom = 8.dp)
         )

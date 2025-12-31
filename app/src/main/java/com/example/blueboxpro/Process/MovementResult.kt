@@ -1,7 +1,7 @@
 package com.example.blueboxpro.Process
 
 enum class UnitSystem {
-    METRIC, IMPERIAL, NAUTICAL
+    METRIC_KMH, METRIC_MS, IMPERIAL, NAUTICAL
 }
 
 class MovementResult(
@@ -36,12 +36,13 @@ class MovementResult(
     fun getMoyspeed(): Float = convertSpeed(moyspeed)
 
     fun getSpeedUnit(): String = when (unitSystem) {
-        UnitSystem.METRIC -> "km/h"
+        UnitSystem.METRIC_KMH -> "km/h"
+        UnitSystem.METRIC_MS -> "m/s"
         UnitSystem.IMPERIAL -> "mph"
         UnitSystem.NAUTICAL -> "kn"
     }
 
-    // --- ACCESSEURS SPÉCIFIQUES (Unités fixes) ---
+    // --- ACCESSEURS SPÉCIFIQUES ---
     fun getSogMs(): Float = sog
     fun getSogKmh(): Float = sog * 3.6f
     fun getSogMph(): Float = sog * 2.23694f
@@ -53,35 +54,32 @@ class MovementResult(
 
     // --- ACCESSEURS ALTITUDE & PRÉCISION ---
     fun getAltitude(): Double = when (unitSystem) {
-        UnitSystem.METRIC -> altitude
+        UnitSystem.METRIC_KMH, UnitSystem.METRIC_MS, UnitSystem.NAUTICAL -> altitude
         UnitSystem.IMPERIAL -> altitude * 3.28084
-        UnitSystem.NAUTICAL -> altitude // On garde les mètres ou on pourrait utiliser des brasses ? Restons sur mètres.
     }
 
     fun getAltitudeUnit(): String = when (unitSystem) {
-        UnitSystem.METRIC -> "m"
+        UnitSystem.METRIC_KMH, UnitSystem.METRIC_MS, UnitSystem.NAUTICAL -> "m"
         UnitSystem.IMPERIAL -> "ft"
-        UnitSystem.NAUTICAL -> "m"
     }
 
     fun getAccuracy(): Float = when (unitSystem) {
-        UnitSystem.METRIC -> accuracy
+        UnitSystem.METRIC_KMH, UnitSystem.METRIC_MS, UnitSystem.NAUTICAL -> accuracy
         UnitSystem.IMPERIAL -> accuracy * 3.28084f
-        UnitSystem.NAUTICAL -> accuracy
     }
 
     fun getAccuracyUnit(): String = when (unitSystem) {
-        UnitSystem.METRIC -> "m"
+        UnitSystem.METRIC_KMH, UnitSystem.METRIC_MS, UnitSystem.NAUTICAL -> "m"
         UnitSystem.IMPERIAL -> "ft"
-        UnitSystem.NAUTICAL -> "m"
     }
 
     // --- MÉTHODES PRIVÉES DE CONVERSION ---
     private fun convertSpeed(speedMs: Float): Float {
         return when (unitSystem) {
-            UnitSystem.METRIC -> speedMs * 3.6f // Vers km/h
-            UnitSystem.IMPERIAL -> speedMs * 2.23694f // Vers mph
-            UnitSystem.NAUTICAL -> speedMs * 1.94384f // Vers Noeuds (Knots)
+            UnitSystem.METRIC_KMH -> speedMs * 3.6f
+            UnitSystem.METRIC_MS -> speedMs
+            UnitSystem.IMPERIAL -> speedMs * 2.23694f
+            UnitSystem.NAUTICAL -> speedMs * 1.94384f
         }
     }
 }

@@ -10,8 +10,10 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.example.blueboxpro.R
 import com.example.blueboxpro.Save.SessionManager
 
 @Composable
@@ -27,7 +29,7 @@ fun Page3() {
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text(
-            text = "Enregistrement de Course",
+            text = stringResource(R.string.recording_title),
             style = MaterialTheme.typography.headlineSmall,
             modifier = Modifier.padding(bottom = 24.dp)
         )
@@ -41,7 +43,7 @@ fun Page3() {
                 modifier = Modifier.padding(16.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Text(text = "Nouvelle Session", style = MaterialTheme.typography.titleMedium)
+                Text(text = stringResource(R.string.new_session), style = MaterialTheme.typography.titleMedium)
                 Spacer(modifier = Modifier.height(16.dp))
                 Button(
                     onClick = {
@@ -53,7 +55,7 @@ fun Page3() {
                 ) {
                     Icon(Icons.Default.PlayArrow, contentDescription = null)
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Démarrer l'enregistrement")
+                    Text(stringResource(R.string.start_recording))
                 }
             }
         }
@@ -62,13 +64,12 @@ fun Page3() {
 
         // Section Historique
         Text(
-            text = "Sauvegardes récentes",
+            text = stringResource(R.string.recent_saves),
             style = MaterialTheme.typography.titleMedium,
             modifier = Modifier.align(Alignment.Start).padding(bottom = 8.dp)
         )
 
         if (sessions.isEmpty()) {
-            // Affichage si aucune sauvegarde
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -76,21 +77,20 @@ fun Page3() {
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text = "Aucune sauvegarde disponible",
+                    text = stringResource(R.string.no_saves),
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center
                 )
             }
         } else {
-            // Liste des sauvegardes réelles
             sessions.forEach { session ->
                 ListItem(
-                    headlineContent = { Text("Session #${session.id} - ${session.date}") },
-                    supportingContent = { Text("Durée: ${session.duration} | Distance: ${session.distance}") },
+                    headlineContent = { Text("${stringResource(R.string.session_id)}${session.id} - ${session.date}") },
+                    supportingContent = { Text("${stringResource(R.string.duration_label)} ${session.duration} | ${stringResource(R.string.distance_label)} ${session.distance}") },
                     trailingContent = {
                         IconButton(onClick = { /* TODO: Export */ }) {
-                            Icon(Icons.Default.Share, contentDescription = "Exporter")
+                            Icon(Icons.Default.Share, contentDescription = stringResource(R.string.export_label))
                         }
                     },
                     colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surface)
@@ -102,7 +102,7 @@ fun Page3() {
         Spacer(modifier = Modifier.weight(1f))
 
         Text(
-            text = "Les données seront exportées au format CSV ou GPX.",
+            text = stringResource(R.string.export_info),
             style = MaterialTheme.typography.bodySmall,
             modifier = Modifier.padding(top = 16.dp)
         )
