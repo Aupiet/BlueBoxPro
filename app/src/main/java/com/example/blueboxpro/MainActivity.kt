@@ -1,3 +1,7 @@
+/**
+ * Main activity of the application. Sets up navigation, handles permissions,
+ * and initializes sensor listeners.
+ */
 package com.example.blueboxpro
 
 import android.Manifest
@@ -28,9 +32,11 @@ import androidx.core.os.LocaleListCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import com.example.blueboxpro.Process.CaptorListener
 import com.example.blueboxpro.Process.MovementProcessor
 import com.example.blueboxpro.Save.SessionManager
@@ -42,6 +48,21 @@ import org.osmdroid.util.GeoPoint
 import java.util.Locale
 
 class MainActivity : AppCompatActivity() {
+    companion object {
+        private const val ROUTE_MAIN = "main"
+        private const val ROUTE_FULL_MAP = "full_map"
+        private const val ROUTE_ADVANCED_SETTINGS = "advanced_settings"
+        private const val ROUTE_SESSION_DETAIL_BASE = "session_detail"
+        private const val ARG_SESSION_ID = "sessionId"
+        private const val ROUTE_SESSION_DETAIL = "$ROUTE_SESSION_DETAIL_BASE/{$ARG_SESSION_ID}"
+        
+        private const val LANG_FR = "fr"
+        private const val LANG_EN = "en"
+        private const val LANG_NAME_FR = "Français"
+        
+        private const val DEFAULT_UNIT_SYSTEM = "METRIC_KMH"
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         
@@ -50,7 +71,6 @@ class MainActivity : AppCompatActivity() {
             androidx.preference.PreferenceManager.getDefaultSharedPreferences(applicationContext)
         )
 
-        // Chargement initial des sessions
         SessionManager.loadSessions(this)
 
         WindowCompat.setDecorFitsSystemWindows(window, false)
@@ -63,8 +83,10 @@ class MainActivity : AppCompatActivity() {
             val context = LocalContext.current
             
             var isDarkMode by remember { mutableStateOf(false) }
-            var unitSystemKey by remember { mutableStateOf("METRIC_KMH") }
-            var language by remember { mutableStateOf(if (Locale.getDefault().language == "fr") "Français" else "English") }
+            var unitSystemKey by remember { mutableStateOf(DEFAULT_UNIT_SYSTEM) }
+            var language by remember { 
+                mutableStateOf(if (Locale.getDefault().language == LANG_FR) LANG_NAME_FR else "English") 
+            }
 
             val processor = remember { MovementProcessor() }
             var lastLocationState by remember { mutableStateOf<GeoPoint?>(null) }
@@ -85,14 +107,13 @@ class MainActivity : AppCompatActivity() {
                 captorListener.start()
                 onDispose {
                     captorListener.stop()
-                    // Sauvegarde lors de la fermeture ou destruction de l'activité
                     SessionManager.saveSessions(this@MainActivity)
                 }
             }
 
             val permissionLauncher = rememberLauncherForActivityResult(
                 contract = ActivityResultContracts.RequestMultiplePermissions()
-            ) { }
+            ) { /* TODO: Handle permission results */ }
 
             LaunchedEffect(Unit) {
                 permissionLauncher.launch(
@@ -106,8 +127,8 @@ class MainActivity : AppCompatActivity() {
             BlueBoxProTheme(darkTheme = isDarkMode) {
                 val rootNavController = rememberNavController()
                 
-                NavHost(navController = rootNavController, startDestination = "main") {
-                    composable("main") {
+                NavHost(navController = rootNavController, startDestination = ROUTE_MAIN) {
+                    composable(ROUTE_MAIN) {
                         MainScreen(
                             processor = processor,
                             lastLocationState = lastLocationState,
@@ -119,22 +140,36 @@ class MainActivity : AppCompatActivity() {
                             onUnitSystemChange = { unitSystemKey = it },
                             onLanguageChange = { newLang ->
                                 language = newLang
-                                val tag = if (newLang == "Français") "fr" else "en"
+                                val tag = if (newLang == LANG_NAME_FR) LANG_FR else LANG_EN
                                 val appLocale: LocaleListCompat = LocaleListCompat.forLanguageTags(tag)
                                 AppCompatDelegate.setApplicationLocales(appLocale)
                             },
-                            onOpenFullScreenMap = { rootNavController.navigate("full_map") },
-                            onNavigateToAdvancedSettings = { rootNavController.navigate("advanced_settings") }
+                            onOpenFullScreenMap = { rootNavController.navigate(ROUTE_FULL_MAP) },
+                            onNavigateToAdvancedSettings = { rootNavController.navigate(ROUTE_ADVANCED_SETTINGS) },
+                            onNavigateToSessionDetail = { sessionId ->
+                                rootNavController.navigate("$ROUTE_SESSION_DETAIL_BASE/$sessionId")
+                            }
                         )
                     }
-                    composable("full_map") {
+                    composable(ROUTE_FULL_MAP) {
                         Page4(
                             location = lastLocationState,
                             onBack = { rootNavController.popBackStack() }
                         )
                     }
-                    composable("advanced_settings") {
+                    composable(ROUTE_ADVANCED_SETTINGS) {
                         AdvancedSettingsPage(
+                            onBack = { rootNavController.popBackStack() }
+                        )
+                    }
+                    composable(
+                        route = ROUTE_SESSION_DETAIL,
+                        arguments = listOf(navArgument(ARG_SESSION_ID) { type = NavType.IntType })
+                    ) { backStackEntry ->
+                        val sessionId = backStackEntry.arguments?.getInt(ARG_SESSION_ID)
+                        val session = SessionManager.sessions.find { it.id == sessionId }
+                        SessionDetailPage(
+                            session = session,
                             onBack = { rootNavController.popBackStack() }
                         )
                     }
@@ -145,17 +180,18 @@ class MainActivity : AppCompatActivity() {
 
     override fun onStop() {
         super.onStop()
-        // Sauvegarde additionnelle quand l'app passe en arrière-plan
         SessionManager.saveSessions(this)
     }
 
     override fun onDestroy() {
         super.onDestroy()
-        // Sauvegarde finale
         SessionManager.saveSessions(this)
     }
 }
 
+/**
+ * The main screen containing the bottom navigation and horizontal pager.
+ */
 @Composable
 fun MainScreen(
     processor: MovementProcessor,
@@ -168,7 +204,8 @@ fun MainScreen(
     onUnitSystemChange: (String) -> Unit,
     onLanguageChange: (String) -> Unit,
     onOpenFullScreenMap: () -> Unit,
-    onNavigateToAdvancedSettings: () -> Unit
+    onNavigateToAdvancedSettings: () -> Unit,
+    onNavigateToSessionDetail: (Int) -> Unit
 ) {
     val pagerState = rememberPagerState(pageCount = { 4 })
     val scope = rememberCoroutineScope()
@@ -227,7 +264,8 @@ fun MainScreen(
                 )
                 2 -> Page3(
                     processor = processor,
-                    refreshTrigger = refreshTrigger
+                    refreshTrigger = refreshTrigger,
+                    onSessionClick = onNavigateToSessionDetail
                 )
                 3 -> SettingsPage(
                     isDarkMode = isDarkMode,
@@ -243,4 +281,7 @@ fun MainScreen(
     }
 }
 
+/**
+ * Data class representing a tab item in the navigation bar.
+ */
 data class TabItem(val icon: ImageVector)

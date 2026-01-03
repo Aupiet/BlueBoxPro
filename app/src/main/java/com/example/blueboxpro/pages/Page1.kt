@@ -1,3 +1,7 @@
+/**
+ * This page displays the main movement analysis data, including Speed Over Ground (SOG),
+ * Course Over Ground (COG), and compass heading.
+ */
 package com.example.blueboxpro.pages
 
 import androidx.compose.foundation.layout.*
@@ -28,49 +32,49 @@ fun Page1(
             modifier = Modifier
                 .fillMaxSize()
                 .verticalScroll(scrollState)
-                .padding(16.dp),
+                .padding(PADDING_MEDIUM),
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(text = stringResource(R.string.movement_analysis_title), style = MaterialTheme.typography.headlineSmall)
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(SPACING_LARGE))
             
-            // Affichage du SOG (Speed Over Ground)
+            // Speed Over Ground (SOG)
             Text(text = stringResource(R.string.sog_label), style = MaterialTheme.typography.titleMedium)
             Text(
-                text = "${"%.2f".format(result.getSog())} ${result.getSpeedUnit()}", 
+                text = "${SOG_FORMAT.format(result.getSog())} ${result.getSpeedUnit()}", 
                 style = MaterialTheme.typography.headlineMedium,
                 color = MaterialTheme.colorScheme.primary
             )
             
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(SPACING_MEDIUM))
             
-            // Affichage du COG (Course Over Ground)
+            // Course Over Ground (COG)
             Text(text = stringResource(R.string.cog_label), style = MaterialTheme.typography.titleMedium)
             Text(
-                text = "${"%.1f".format(result.getCog())}°", 
+                text = "${DEGREE_FORMAT.format(result.getCog())}°", 
                 style = MaterialTheme.typography.headlineMedium,
                 color = MaterialTheme.colorScheme.secondary
             )
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(SPACING_MEDIUM))
 
-            // Affichage de la Boussole (Compass)
+            // Compass
             Text(text = stringResource(R.string.compass_label), style = MaterialTheme.typography.titleMedium)
             Text(
-                text = "${"%.1f".format(result.getAzimuth())}°",
+                text = "${DEGREE_FORMAT.format(result.getAzimuth())}°",
                 style = MaterialTheme.typography.headlineMedium,
                 color = MaterialTheme.colorScheme.tertiary
             )
             
-            Spacer(modifier = Modifier.height(32.dp))
+            Spacer(modifier = Modifier.height(SPACING_XLARGE))
             
             Text(text = stringResource(R.string.technical_details), style = MaterialTheme.typography.labelLarge)
-            Text(text = "${stringResource(R.string.average_label)} ${"%.2f".format(result.getMoyspeed())} ${result.getSpeedUnit()}")
-            Text(text = "${stringResource(R.string.gps_label)} ${"%.2f".format(result.getSpeedGPS())} ${result.getSpeedUnit()}")
-            Text(text = "${stringResource(R.string.imu_label)} ${"%.2f".format(result.getSpeedIMU())} ${result.getSpeedUnit()}")
+            Text(text = "${stringResource(R.string.average_label)} ${SOG_FORMAT.format(result.getMoyspeed())} ${result.getSpeedUnit()}")
+            Text(text = "${stringResource(R.string.gps_label)} ${SOG_FORMAT.format(result.getSpeedGPS())} ${result.getSpeedUnit()}")
+            Text(text = "${stringResource(R.string.imu_label)} ${SOG_FORMAT.format(result.getSpeedIMU())} ${result.getSpeedUnit()}")
             
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(SPACING_LARGE))
 
             Button(onClick = { processor.reset() }) {
                 Text(stringResource(R.string.reset_button))
@@ -78,3 +82,10 @@ fun Page1(
         }
     }
 }
+
+private val PADDING_MEDIUM = 16.dp
+private val SPACING_MEDIUM = 16.dp
+private val SPACING_LARGE = 24.dp
+private val SPACING_XLARGE = 32.dp
+private const val SOG_FORMAT = "%.2f"
+private const val DEGREE_FORMAT = "%.1f"

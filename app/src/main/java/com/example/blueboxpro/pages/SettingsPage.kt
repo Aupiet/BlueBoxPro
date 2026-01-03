@@ -1,3 +1,7 @@
+/**
+ * This page allows the user to configure general application settings,
+ * such as theme, unit system, and language.
+ */
 package com.example.blueboxpro.pages
 
 import androidx.compose.foundation.layout.*
@@ -14,6 +18,9 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import com.example.blueboxpro.R
 
+/**
+ * Composable for the settings screen.
+ */
 @Composable
 fun SettingsPage(
     isDarkMode: Boolean,
@@ -29,12 +36,12 @@ fun SettingsPage(
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(scrollState)
-            .padding(16.dp)
+            .padding(PADDING_MEDIUM)
     ) {
         Text(
             text = stringResource(R.string.settings_title), 
             style = MaterialTheme.typography.headlineMedium,
-            modifier = Modifier.padding(bottom = 24.dp)
+            modifier = Modifier.padding(bottom = SPACING_LARGE)
         )
 
         ListItem(
@@ -52,7 +59,7 @@ fun SettingsPage(
         Text(
             text = stringResource(R.string.unit_system_title),
             style = MaterialTheme.typography.titleMedium,
-            modifier = Modifier.padding(top = 16.dp, bottom = 8.dp)
+            modifier = Modifier.padding(top = SPACING_MEDIUM, bottom = SPACING_SMALL)
         )
         
         val unitOptions = listOf(
@@ -67,13 +74,13 @@ fun SettingsPage(
                 Row(
                     Modifier
                         .fillMaxWidth()
-                        .height(48.dp)
+                        .height(OPTION_HEIGHT)
                         .selectable(
                             selected = (text == unitSystem),
                             onClick = { onUnitSystemChange(text) },
                             role = Role.RadioButton
                         )
-                        .padding(horizontal = 16.dp),
+                        .padding(horizontal = PADDING_MEDIUM),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     RadioButton(
@@ -83,23 +90,23 @@ fun SettingsPage(
                     Text(
                         text = text,
                         style = MaterialTheme.typography.bodyLarge,
-                        modifier = Modifier.padding(start = 16.dp)
+                        modifier = Modifier.padding(start = PADDING_MEDIUM)
                     )
                 }
             }
         }
 
-        HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+        HorizontalDivider(modifier = Modifier.padding(vertical = SPACING_SMALL))
 
         Text(
             text = stringResource(R.string.language_title),
             style = MaterialTheme.typography.titleMedium,
-            modifier = Modifier.padding(top = 8.dp, bottom = 8.dp)
+            modifier = Modifier.padding(top = SPACING_SMALL, bottom = SPACING_SMALL)
         )
         
         val langOptionsMap = mapOf(
-            "Français" to stringResource(R.string.lang_french),
-            "English" to stringResource(R.string.lang_english)
+            LANG_KEY_FRENCH to stringResource(R.string.lang_french),
+            LANG_KEY_ENGLISH to stringResource(R.string.lang_english)
         )
         
         Column(Modifier.selectableGroup()) {
@@ -107,13 +114,13 @@ fun SettingsPage(
                 Row(
                     Modifier
                         .fillMaxWidth()
-                        .height(48.dp)
+                        .height(OPTION_HEIGHT)
                         .selectable(
                             selected = (key == language),
                             onClick = { onLanguageChange(key) },
                             role = Role.RadioButton
                         )
-                        .padding(horizontal = 16.dp),
+                        .padding(horizontal = PADDING_MEDIUM),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     RadioButton(
@@ -123,13 +130,13 @@ fun SettingsPage(
                     Text(
                         text = label,
                         style = MaterialTheme.typography.bodyLarge,
-                        modifier = Modifier.padding(start = 16.dp)
+                        modifier = Modifier.padding(start = PADDING_MEDIUM)
                     )
                 }
             }
         }
 
-        Spacer(modifier = Modifier.height(32.dp))
+        Spacer(modifier = Modifier.height(SPACING_XLARGE))
 
         Button(
             onClick = onNavigateToAdvancedSettings,
@@ -143,7 +150,17 @@ fun SettingsPage(
         Text(
             text = stringResource(R.string.version_pre_alpha),
             style = MaterialTheme.typography.bodySmall,
-            modifier = Modifier.align(Alignment.CenterHorizontally).padding(bottom = 8.dp)
+            modifier = Modifier.align(Alignment.CenterHorizontally).padding(bottom = SPACING_SMALL)
         )
     }
 }
+
+private val PADDING_MEDIUM = 16.dp
+private val SPACING_SMALL = 8.dp
+private val SPACING_MEDIUM = 16.dp
+private val SPACING_LARGE = 24.dp
+private val SPACING_XLARGE = 32.dp
+private val OPTION_HEIGHT = 48.dp
+
+private const val LANG_KEY_FRENCH = "Français"
+private const val LANG_KEY_ENGLISH = "English"

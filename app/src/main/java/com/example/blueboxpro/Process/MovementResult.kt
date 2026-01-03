@@ -1,3 +1,7 @@
+/**
+ * This class holds the processed movement data and provides methods to access
+ * them in various unit systems (Metric, Imperial, Nautical).
+ */
 package com.example.blueboxpro.Process
 
 enum class UnitSystem {
@@ -23,18 +27,33 @@ class MovementResult(
     private val altitude: Double, // mètres
     private val accuracy: Float   // mètres
 ) {
-    // --- ACCESSEURS ACCÉLÉRATION ---
+    companion object {
+        private const val MS_TO_KMH = 3.6f
+        private const val MS_TO_MPH = 2.23694f
+        private const val MS_TO_KNOTS = 1.94384f
+        private const val METERS_TO_FEET = 3.28084
+        private const val METERS_TO_FEET_FLOAT = 3.28084f
+    }
+
+    /** Returns the X-axis acceleration. */
     fun getAccelX(): Float = accelX
+    /** Returns the Y-axis acceleration. */
     fun getAccelY(): Float = accelY
+    /** Returns the Z-axis acceleration. */
     fun getAccelZ(): Float = accelZ
 
-    // --- ACCESSEURS VITESSE (Respectent le système d'unité) ---
+    /** Returns the Speed Over Ground in the current unit system. */
     fun getSog(): Float = convertSpeed(sog)
+    /** Returns the IMU-derived speed in the current unit system. */
     fun getSpeedIMU(): Float = convertSpeed(speedIMU)
+    /** Returns the GPS-derived speed in the current unit system. */
     fun getSpeedGPS(): Float = convertSpeed(speedGPS)
+    /** Returns the fused speed in the current unit system. */
     fun getSpeedFused(): Float = convertSpeed(speedFused)
+    /** Returns the average speed in the current unit system. */
     fun getMoyspeed(): Float = convertSpeed(moyspeed)
 
+    /** Returns the string representation of the speed unit. */
     fun getSpeedUnit(): String = when (unitSystem) {
         UnitSystem.METRIC_KMH -> "km/h"
         UnitSystem.METRIC_MS -> "m/s"
@@ -42,44 +61,53 @@ class MovementResult(
         UnitSystem.NAUTICAL -> "kn"
     }
 
-    // --- ACCESSEURS SPÉCIFIQUES ---
+    /** Returns Speed Over Ground in m/s. */
     fun getSogMs(): Float = sog
-    fun getSogKmh(): Float = sog * 3.6f
-    fun getSogMph(): Float = sog * 2.23694f
-    fun getSogKnots(): Float = sog * 1.94384f
+    /** Returns Speed Over Ground in km/h. */
+    fun getSogKmh(): Float = sog * MS_TO_KMH
+    /** Returns Speed Over Ground in mph. */
+    fun getSogMph(): Float = sog * MS_TO_MPH
+    /** Returns Speed Over Ground in knots. */
+    fun getSogKnots(): Float = sog * MS_TO_KNOTS
 
-    // --- ACCESSEURS NAVIGATION ---
+    /** Returns the Course Over Ground in degrees. */
     fun getCog(): Float = cog
+    /** Returns the Azimuth in degrees. */
     fun getAzimuth(): Float = azimuth
 
-    // --- ACCESSEURS ALTITUDE & PRÉCISION ---
+    /** Returns the altitude in the current unit system. */
     fun getAltitude(): Double = when (unitSystem) {
         UnitSystem.METRIC_KMH, UnitSystem.METRIC_MS, UnitSystem.NAUTICAL -> altitude
-        UnitSystem.IMPERIAL -> altitude * 3.28084
+        UnitSystem.IMPERIAL -> altitude * METERS_TO_FEET
     }
 
+    /** Returns the string representation of the altitude unit. */
     fun getAltitudeUnit(): String = when (unitSystem) {
         UnitSystem.METRIC_KMH, UnitSystem.METRIC_MS, UnitSystem.NAUTICAL -> "m"
         UnitSystem.IMPERIAL -> "ft"
     }
 
+    /** Returns the accuracy in the current unit system. */
     fun getAccuracy(): Float = when (unitSystem) {
         UnitSystem.METRIC_KMH, UnitSystem.METRIC_MS, UnitSystem.NAUTICAL -> accuracy
-        UnitSystem.IMPERIAL -> accuracy * 3.28084f
+        UnitSystem.IMPERIAL -> accuracy * METERS_TO_FEET_FLOAT
     }
 
+    /** Returns the string representation of the accuracy unit. */
     fun getAccuracyUnit(): String = when (unitSystem) {
         UnitSystem.METRIC_KMH, UnitSystem.METRIC_MS, UnitSystem.NAUTICAL -> "m"
         UnitSystem.IMPERIAL -> "ft"
     }
 
-    // --- MÉTHODES PRIVÉES DE CONVERSION ---
+    /**
+     * Converts a speed value from m/s to the selected unit system.
+     */
     private fun convertSpeed(speedMs: Float): Float {
         return when (unitSystem) {
-            UnitSystem.METRIC_KMH -> speedMs * 3.6f
+            UnitSystem.METRIC_KMH -> speedMs * MS_TO_KMH
             UnitSystem.METRIC_MS -> speedMs
-            UnitSystem.IMPERIAL -> speedMs * 2.23694f
-            UnitSystem.NAUTICAL -> speedMs * 1.94384f
+            UnitSystem.IMPERIAL -> speedMs * MS_TO_MPH
+            UnitSystem.NAUTICAL -> speedMs * MS_TO_KNOTS
         }
     }
 }

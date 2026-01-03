@@ -1,3 +1,7 @@
+/**
+ * This page provides a layout for displaying the map and movement data,
+ * delegating the actual rendering to MapComponents.
+ */
 package com.example.blueboxpro.pages
 
 import android.annotation.SuppressLint
@@ -6,6 +10,9 @@ import com.example.blueboxpro.Process.MovementProcessor
 import com.example.blueboxpro.ui.components.MapComponents
 import org.osmdroid.util.GeoPoint
 
+/**
+ * Composable for the second page of the application, focused on the map view.
+ */
 @SuppressLint("MissingPermission")
 @Composable
 fun Page2(

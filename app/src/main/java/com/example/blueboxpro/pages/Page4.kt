@@ -1,3 +1,6 @@
+/**
+ * This page provides a full-screen map view with manual recentering capability.
+ */
 package com.example.blueboxpro.pages
 
 import androidx.compose.foundation.layout.*
@@ -12,6 +15,9 @@ import androidx.compose.ui.unit.dp
 import com.example.blueboxpro.ui.components.MapComponents
 import org.osmdroid.util.GeoPoint
 
+/**
+ * Composable that displays a full-screen map.
+ */
 @Composable
 fun Page4(location: GeoPoint?, onBack: () -> Unit) {
     var recenterTrigger by remember { mutableStateOf(0) }
@@ -29,7 +35,7 @@ fun Page4(location: GeoPoint?, onBack: () -> Unit) {
         FloatingActionButton(
             onClick = onBack,
             modifier = Modifier
-                .padding(24.dp)
+                .padding(FAB_PADDING)
                 .align(Alignment.BottomStart),
             containerColor = MaterialTheme.colorScheme.secondary
         ) {
@@ -39,7 +45,7 @@ fun Page4(location: GeoPoint?, onBack: () -> Unit) {
         FloatingActionButton(
             onClick = { recenterTrigger++ },
             modifier = Modifier
-                .padding(24.dp)
+                .padding(FAB_PADDING)
                 .align(Alignment.BottomEnd),
             containerColor = MaterialTheme.colorScheme.primary
         ) {
@@ -47,3 +53,5 @@ fun Page4(location: GeoPoint?, onBack: () -> Unit) {
         }
     }
 }
+
+private val FAB_PADDING = 24.dp

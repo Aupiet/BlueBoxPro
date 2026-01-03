@@ -1,5 +1,9 @@
+/**
+ * This page manages session recordings and displays the history of saved sessions.
+ */
 package com.example.blueboxpro.pages
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -19,21 +23,22 @@ import com.example.blueboxpro.R
 import com.example.blueboxpro.Save.SessionManager
 import com.example.blueboxpro.Process.MovementProcessor
 
+/**
+ * Composable for the third page of the application, focused on session management.
+ */
 @Composable
 fun Page3(
     processor: MovementProcessor,
-    refreshTrigger: Int
+    refreshTrigger: Int,
+    onSessionClick: (Int) -> Unit
 ) {
     val scrollState = rememberScrollState()
     val sessions = SessionManager.sessions
     val context = LocalContext.current
     
-    // On utilise l'état global du SessionManager pour la persistance
     val currentRecording = SessionManager.activeRecording
     val isRecording = currentRecording != null
 
-    // Effet pour ajouter des points automatiquement pendant l'enregistrement
-    // Cet effet sera relancé à chaque mise à jour des capteurs (refreshTrigger)
     LaunchedEffect(refreshTrigger) {
         if (isRecording) {
             currentRecording?.addPoint(
@@ -50,16 +55,16 @@ fun Page3(
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(scrollState)
-            .padding(16.dp),
+            .padding(PADDING_MEDIUM),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text(
             text = stringResource(R.string.recording_title),
             style = MaterialTheme.typography.headlineSmall,
-            modifier = Modifier.padding(bottom = 24.dp)
+            modifier = Modifier.padding(bottom = SPACING_LARGE)
         )
 
-        // Section Contrôle d'enregistrement
+        // Recording Control Section
         Card(
             modifier = Modifier.fillMaxWidth(),
             colors = CardDefaults.cardColors(
@@ -67,7 +72,7 @@ fun Page3(
             )
         ) {
             Column(
-                modifier = Modifier.padding(16.dp),
+                modifier = Modifier.padding(PADDING_MEDIUM),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
@@ -82,7 +87,7 @@ fun Page3(
                     )
                 }
 
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(SPACING_MEDIUM))
                 
                 Button(
                     onClick = {
@@ -99,7 +104,7 @@ fun Page3(
                         imageVector = if (isRecording) Icons.Default.Close else Icons.Default.PlayArrow, 
                         contentDescription = null
                     )
-                    Spacer(modifier = Modifier.width(8.dp))
+                    Spacer(modifier = Modifier.width(SPACING_SMALL))
                     Text(
                         text = if (isRecording) stringResource(R.string.stop_recording) else stringResource(R.string.start_recording)
                     )
@@ -107,20 +112,20 @@ fun Page3(
             }
         }
 
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(SPACING_LARGE))
 
-        // Section Historique
+        // History Section
         Text(
             text = stringResource(R.string.recent_saves),
             style = MaterialTheme.typography.titleMedium,
-            modifier = Modifier.align(Alignment.Start).padding(bottom = 8.dp)
+            modifier = Modifier.align(Alignment.Start).padding(bottom = SPACING_SMALL)
         )
 
         if (sessions.isEmpty()) {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(vertical = 40.dp),
+                    .padding(vertical = EMPTY_STATE_VERTICAL_PADDING),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
@@ -133,10 +138,11 @@ fun Page3(
         } else {
             sessions.reversed().forEach { session ->
                 ListItem(
+                    modifier = Modifier.clickable { onSessionClick(session.id) },
                     headlineContent = { Text("${session.name} - ${session.date}") },
                     supportingContent = { Text("${stringResource(R.string.duration_label)} ${session.duration} | ${stringResource(R.string.distance_label)} ${session.distance}") },
                     trailingContent = {
-                        IconButton(onClick = { /* TODO: Export */ }) {
+                        IconButton(onClick = { /* TODO: Implement export functionality */ }) {
                             Icon(Icons.Default.Share, contentDescription = stringResource(R.string.export_label))
                         }
                     },
@@ -151,7 +157,13 @@ fun Page3(
         Text(
             text = stringResource(R.string.export_info),
             style = MaterialTheme.typography.bodySmall,
-            modifier = Modifier.padding(top = 16.dp)
+            modifier = Modifier.padding(top = SPACING_MEDIUM)
         )
     }
 }
+
+private val PADDING_MEDIUM = 16.dp
+private val SPACING_SMALL = 8.dp
+private val SPACING_MEDIUM = 16.dp
+private val SPACING_LARGE = 24.dp
+private val EMPTY_STATE_VERTICAL_PADDING = 40.dp

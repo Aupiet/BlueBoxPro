@@ -1,3 +1,7 @@
+/**
+ * This class processes motion data from sensors (accelerometer, GPS, compass)
+ * to estimate speed, orientation, and location using Kalman filtering and ZUPT logic.
+ */
 package com.example.blueboxpro.Process
 
 import org.osmdroid.util.GeoPoint
@@ -5,6 +9,21 @@ import kotlin.math.round
 import kotlin.math.sqrt
 
 class MovementProcessor {
+    companion object {
+        private const val GPS_TIMEOUT_MS = 5000L
+        private const val MIN_GPS_ACCURACY = 50f
+        private const val SPEED_THRESHOLD_IMU = 0.5f
+        private const val SPEED_THRESHOLD_GPS = 0.5f
+        private const val ZUPT_ACCEL_THRESHOLD = 0.15f
+        private const val STATIONARY_SAMPLES_REQUIRED = 20
+        private const val HPF_ALPHA = 0.98f
+        private const val AZIMUTH_ALPHA = 0.15f
+        private const val SPEED_HISTORY_SIZE = 10
+        private const val FULL_CIRCLE_DEGREES = 360f
+        private const val HALF_CIRCLE_DEGREES = 180f
+        private const val LOW_SPEED_RATIO_THRESHOLD = 0.1f
+    }
+
     val kalmanX = SimpleKalmanFilter()
     val kalmanY = SimpleKalmanFilter()
     val kalmanZ = SimpleKalmanFilter()
@@ -15,7 +34,7 @@ class MovementProcessor {
     var speedIMU: Float = 0f
     var speedGPS: Float = 0f
     var speedFused: Float = 0f
-    private val speeds = FloatArray(10)
+    private val speeds = FloatArray(SPEED_HISTORY_SIZE)
     var moyspeed: Float = 0f
 
     var altitude: Double = 0.0
@@ -23,30 +42,16 @@ class MovementProcessor {
     var gpsAccuracy: Float = 0f
     
     private var lastGpsUpdateMillis: Long = 0L
-    private val GPS_TIMEOUT_MS = 5000L
-    private val MIN_GPS_ACCURACY = 50f // Précision minimum acceptable en mètres
 
-    // SOG (Speed Over Ground) et COG (Course Over Ground)
-    var sog: Float = 0f // Vitesse fond (souvent en m/s ou nœuds)
-    var cog: Float = 0f // Route fond (en degrés 0-360)
+    var sog: Float = 0f // Speed Over Ground
+    var cog: Float = 0f // Course Over Ground
     
-    // Boussole (Compass)
-    var azimuth: Float = 0f // Orientation du téléphone par rapport au Nord magnétique
-    private val azarray = FloatArray(3)
-    var newaz: Float = 0f
-
+    var azimuth: Float = 0f
     var moyaz: Float = 0f
 
-    // Seuils de vitesse (offsets) différents pour l'IMU et le GPS
-    private val speedThresholdIMU = 0.5f
-    private val speedThresholdGPS = 0.5f
-
-    // Paramètres pour ZUPT (Zero Velocity Update) et HPF (High Pass Filter)
-    private val ZUPT_ACCEL_THRESHOLD = 0.15f
-    private var stationaryCount = 0
-    private val STATIONARY_SAMPLES_REQUIRED = 20
-    private val HPF_ALPHA = 0.98f // Filtre passe-haut (leaky integrator) pour limiter la dérive
-
+    /**
+     * Converts current movement state into a MovementResult based on the selected unit system.
+     */
     fun getResult(unitSystemStr: String): MovementResult {
         val unitSystem = when {
             unitSystemStr.contains("km/h") -> UnitSystem.METRIC_KMH
@@ -72,6 +77,9 @@ class MovementProcessor {
         )
     }
 
+    /**
+     * Processes raw acceleration data to estimate speed via integration and Kalman filtering.
+     */
     fun processAcceleration(ax: Float, ay: Float, az: Float, dt: Float) {
         checkGpsTimeout()
         
@@ -79,7 +87,6 @@ class MovementProcessor {
         accelY = ay
         accelZ = az
 
-        // Détection de l'immobilité pour ZUPT (Zero Velocity Update)
         val accelMag = sqrt(ax * ax + ay * ay + az * az)
         if (accelMag < ZUPT_ACCEL_THRESHOLD) {
             stationaryCount++
@@ -88,37 +95,43 @@ class MovementProcessor {
         }
 
         if (stationaryCount >= STATIONARY_SAMPLES_REQUIRED) {
-            // L'appareil est immobile, on force les vitesses à zéro pour annuler la dérive
             kalmanX.x = 0f
             kalmanY.x = 0f
             kalmanZ.x = 0f
         } else {
-            // Intégration de l'accélération via le filtre de Kalman
             kalmanX.predict(ax, dt)
             kalmanY.predict(ay, dt)
             kalmanZ.predict(az, dt)
 
-            // Application d'un filtre passe-haut (intégrateur à fuite) pour limiter la dérive cumulative
             kalmanX.x *= HPF_ALPHA
             kalmanY.x *= HPF_ALPHA
             kalmanZ.x *= HPF_ALPHA
         }
 
         val rawSpeedIMU = sqrt(kalmanX.x * kalmanX.x + kalmanY.x * kalmanY.x + kalmanZ.x * kalmanZ.x)
-        speedIMU = if (rawSpeedIMU < speedThresholdIMU) 0f else rawSpeedIMU
-        // La vitesse fusionnée suit initialement le seuil de l'IMU avant correction GPS
-        speedFused = if (rawSpeedIMU < speedThresholdIMU) 0f else rawSpeedIMU
-        // Moyenne des dernières vitesses
-        speeds.forEachIndexed { index, _ ->
-            if (index < speeds.size - 1) {
-                speeds[index] = speeds[index + 1]
-            }
+        speedIMU = if (rawSpeedIMU < SPEED_THRESHOLD_IMU) 0f else rawSpeedIMU
+        speedFused = if (rawSpeedIMU < SPEED_THRESHOLD_IMU) 0f else rawSpeedIMU
+        
+        updateSpeedAverage(speedFused)
+    }
+
+    private var stationaryCount = 0
+
+    /**
+     * Updates the running average of the speed.
+     */
+    private fun updateSpeedAverage(currentSpeed: Float) {
+        for (i in 0 until speeds.size - 1) {
+            speeds[i] = speeds[i + 1]
         }
-        speeds[speeds.size - 1] = speedFused
+        speeds[speeds.size - 1] = currentSpeed
         moyspeed = speeds.average().toFloat()
         sog = moyspeed
     }
 
+    /**
+     * Resets GPS speed if no update has been received for a certain duration.
+     */
     private fun checkGpsTimeout() {
         if (lastGpsUpdateMillis != 0L && System.currentTimeMillis() - lastGpsUpdateMillis > GPS_TIMEOUT_MS) {
             speedGPS = 0f
@@ -126,8 +139,10 @@ class MovementProcessor {
         }
     }
 
+    /**
+     * Updates the processor state with fresh GPS data.
+     */
     fun updateWithGPS(lat: Double, lon: Double, alt: Double, gpsS: Float, gpsBearing: Float, accuracy: Float, onUpdate: () -> Unit) {
-        // On ne traite les données que si la précision est suffisante
         if (accuracy > MIN_GPS_ACCURACY) {
             gpsAccuracy = accuracy
             onUpdate()
@@ -137,16 +152,15 @@ class MovementProcessor {
         lastGpsUpdateMillis = System.currentTimeMillis()
         lastLocation = GeoPoint(lat, lon)
         altitude = alt
-        speedGPS = if (gpsS < speedThresholdGPS) 0f else gpsS
+        speedGPS = if (gpsS < SPEED_THRESHOLD_GPS) 0f else gpsS
         gpsAccuracy = accuracy
         
-        // Le COG (Course Over Ground) est donné par le 'bearing' du GPS
-        if (gpsS > speedThresholdGPS) {
+        if (gpsS > SPEED_THRESHOLD_GPS) {
             cog = gpsBearing
         }
 
         val currentIMUSpeed = sqrt(kalmanX.x * kalmanX.x + kalmanY.x * kalmanY.x + kalmanZ.x * kalmanZ.x)
-        if (currentIMUSpeed > 0.1f) {
+        if (currentIMUSpeed > LOW_SPEED_RATIO_THRESHOLD) {
             val ratio = gpsS / currentIMUSpeed
             kalmanX.update(kalmanX.x * ratio)
             kalmanY.update(kalmanY.x * ratio)
@@ -158,35 +172,32 @@ class MovementProcessor {
         }
         
         val rawSpeedFused = sqrt(kalmanX.x * kalmanX.x + kalmanY.x * kalmanY.x + kalmanZ.x * kalmanZ.x)
-        speedFused = if (rawSpeedFused < speedThresholdGPS) 0f else rawSpeedFused
+        speedFused = if (rawSpeedFused < SPEED_THRESHOLD_GPS) 0f else rawSpeedFused
         
-        // Moyenne des dernières vitesses
-        speeds.forEachIndexed { index, _ ->
-            if (index < speeds.size - 1) {
-                speeds[index] = speeds[index + 1]
-            }
-        }
-        speeds[speeds.size - 1] = speedFused
-        moyspeed = speeds.average().toFloat()
-        sog = moyspeed
+        updateSpeedAverage(speedFused)
         onUpdate()
     }
 
-    private val ALPHA = 0.15f
+    /**
+     * Updates the azimuth (compass orientation) with smoothing.
+     */
     fun updateOrientation(newaz: Float, onUpdate: () -> Unit) {
         var diffaz: Float = newaz - moyaz
 
-        while (diffaz < -180f) diffaz += 360f
-        while (diffaz > 180f) diffaz -= 360f
+        while (diffaz < -HALF_CIRCLE_DEGREES) diffaz += FULL_CIRCLE_DEGREES
+        while (diffaz > HALF_CIRCLE_DEGREES) diffaz -= FULL_CIRCLE_DEGREES
 
-        moyaz = (moyaz + ALPHA * diffaz)
+        moyaz = (moyaz + AZIMUTH_ALPHA * diffaz)
 
-        if (moyaz < 0) moyaz += 360f
-        if (moyaz >= 360) moyaz -= 360f
+        if (moyaz < 0) moyaz += FULL_CIRCLE_DEGREES
+        if (moyaz >= FULL_CIRCLE_DEGREES) moyaz -= FULL_CIRCLE_DEGREES
         azimuth = round(moyaz)
         onUpdate()
     }
 
+    /**
+     * Resets all internal states of the movement processor.
+     */
     fun reset() {
         kalmanX.x = 0f
         kalmanY.x = 0f
