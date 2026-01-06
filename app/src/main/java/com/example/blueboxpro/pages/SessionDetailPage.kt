@@ -1,8 +1,12 @@
+/**
+ * This page displays detailed information about a specific recorded session,
+ * allowing the user to view statistics and delete the session.
+ */
 package com.example.blueboxpro.pages
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -15,6 +19,9 @@ import com.example.blueboxpro.R
 import com.example.blueboxpro.Save.Session
 import com.example.blueboxpro.Save.SessionManager
 
+/**
+ * Composable for the session detail screen.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SessionDetailPage(
@@ -27,8 +34,8 @@ fun SessionDetailPage(
     if (showDeleteDialog && session != null) {
         AlertDialog(
             onDismissRequest = { showDeleteDialog = false },
-            title = { Text("Supprimer la session") },
-            text = { Text("Êtes-vous sûr de vouloir supprimer cette session ? Cette action est irréversible.") },
+            title = { Text(stringResource(R.string.delete_session_title)) },
+            text = { Text(stringResource(R.string.delete_session_confirmation)) },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -38,12 +45,12 @@ fun SessionDetailPage(
                     },
                     colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
                 ) {
-                    Text("Supprimer")
+                    Text(stringResource(R.string.delete_label))
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showDeleteDialog = false }) {
-                    Text("Annuler")
+                    Text(stringResource(R.string.cancel_label))
                 }
             }
         )
@@ -52,10 +59,10 @@ fun SessionDetailPage(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(session?.name ?: "Détails de la session") },
+                title = { Text(session?.name ?: stringResource(R.string.session_details_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Retour")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Retour")
                     }
                 },
                 actions = {
@@ -76,7 +83,7 @@ fun SessionDetailPage(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .padding(16.dp),
+                .padding(PADDING_MEDIUM),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
@@ -86,7 +93,7 @@ fun SessionDetailPage(
                 Text(text = "Durée : ${session.duration}", style = MaterialTheme.typography.bodyLarge)
                 Text(text = "Distance : ${session.distance}", style = MaterialTheme.typography.bodyLarge)
                 
-                Spacer(modifier = Modifier.height(24.dp))
+                Spacer(modifier = Modifier.height(SPACING_LARGE))
                 
                 Text(
                     text = "Statistiques détaillées à venir...",
@@ -94,8 +101,11 @@ fun SessionDetailPage(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             } else {
-                Text(text = "Session non trouvée")
+                Text(text = stringResource(R.string.session_not_found))
             }
         }
     }
 }
+
+private val PADDING_MEDIUM = 16.dp
+private val SPACING_LARGE = 24.dp
