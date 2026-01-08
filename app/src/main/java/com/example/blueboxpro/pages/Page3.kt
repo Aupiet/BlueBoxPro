@@ -140,7 +140,9 @@ fun Page3(
                 ListItem(
                     modifier = Modifier.clickable { onSessionClick(session.id) },
                     headlineContent = { Text("${session.name} - ${session.date}") },
-                    supportingContent = { Text("${stringResource(R.string.duration_label)} ${session.duration} | ${stringResource(R.string.distance_label)} ${session.distance}") },
+                    supportingContent = { Text(
+                        "${stringResource(R.string.duration_label)} ${session.duration} | ${stringResource(R.string.distance_label)} ${session.distance} | Vitesse moyenne : ${session.averageSpeed}"
+                    )},
                     trailingContent = {
                         IconButton(onClick = { /* TODO: Implement export functionality */ }) {
                             Icon(Icons.Default.Share, contentDescription = stringResource(R.string.export_label))

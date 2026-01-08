@@ -37,6 +37,7 @@ data class Session(
     val date: String,
     val duration: String,
     val distance: String,
+    val averageSpeed: String,
     val points: List<GpsPoint> = emptyList()
 )
 
@@ -97,12 +98,17 @@ class Recording(val name: String) {
         } else {
             String.format(Locale.getDefault(), M_FORMAT, totalDist)
         }
-
+        val durationSeconds = durationMillis / 1000.0
+        val averageSpeed = if (durationSeconds > 0) {
+            (totalDist / durationSeconds) * 3.6 // conversion m/s -> km/h
+        } else 0.0
+        val averageSpeedStr = String.format(Locale.getDefault(), "%.2f km/h", averageSpeed)
         SessionManager.addSession(
             name = name,
             date = startDate,
             duration = durationStr,
             distance = finalDistanceStr,
+            averageSpeed = averageSpeedStr,
             points = _points.toList()
         )
         SessionManager.saveSessions(context)
@@ -179,9 +185,9 @@ object SessionManager {
     /**
      * Adds a new session to the list of saved sessions.
      */
-    fun addSession(name: String, date: String, duration: String, distance: String, points: List<GpsPoint> = emptyList()) {
+    fun addSession(name: String, date: String, duration: String, distance: String, averageSpeed :String, points: List<GpsPoint> = emptyList()) {
         val newId = if (sessions.isEmpty()) 1 else sessions.maxOf { it.id } + 1
-        sessions.add(Session(newId, name, date, duration, distance, points))
+        sessions.add(Session(newId, name, date, duration, distance,  averageSpeed, points))
     }
 
     /**
