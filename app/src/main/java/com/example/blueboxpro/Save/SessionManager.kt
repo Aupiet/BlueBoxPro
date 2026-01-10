@@ -18,6 +18,7 @@ import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import android.util.Log
 
 @Serializable
 data class GpsPoint(
@@ -215,6 +216,7 @@ object SessionManager {
 
         try {
             val jsonString = file.readText()
+            Log.d("CSV Content", jsonString) // verifie contenu correcte
             val loadedSessions = json.decodeFromString<List<Session>>(jsonString)
             sessions.clear()
             sessions.addAll(loadedSessions)
@@ -235,4 +237,45 @@ object SessionManager {
             e.printStackTrace()
         }
     }
+    fun exportSessionToCsv(context: Context, session: Session): File {
+        val fileName = "session_${session.id}.csv"
+        val file = File(context.cacheDir, fileName)
+
+        val sb = StringBuilder()
+        Log.d("CSV", "Path: ${file.absolutePath}") // verifie que le fichier est créé ds le cache
+        // En-tête session
+        sb.appendLine("Session name,Date,Duration,Distance,Average speed")
+        sb.appendLine("${session.name},${session.date},${session.duration},${session.distance},${session.averageSpeed}")
+        sb.appendLine()
+
+        // En-tête points GPS
+        sb.appendLine("id,latitude,longitude,altitude,sog,cog,timestamp")
+
+        session.points.forEach { p ->
+            sb.appendLine(
+                "${p.id},${p.latitude},${p.longitude},${p.altitude},${p.sog},${p.cog},${p.timestamp}"
+            )
+        }
+
+        file.writeText(sb.toString())
+        return file
+    }
+    fun shareFile(context: Context, file: File) {
+        val uri = androidx.core.content.FileProvider.getUriForFile(
+            context,
+            "${context.packageName}.provider",
+            file
+        )
+
+        val intent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+            type = "text/csv"
+            putExtra(android.content.Intent.EXTRA_STREAM, uri)
+            addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+
+        context.startActivity(
+            android.content.Intent.createChooser(intent, "Exporter la session")
+        )
+    }
+
 }

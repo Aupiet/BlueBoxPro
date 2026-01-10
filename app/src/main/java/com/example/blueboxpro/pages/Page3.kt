@@ -23,6 +23,7 @@ import com.example.blueboxpro.R
 import com.example.blueboxpro.Save.SessionManager
 import com.example.blueboxpro.Process.MovementProcessor
 
+
 /**
  * Composable for the third page of the application, focused on session management.
  */
@@ -35,7 +36,7 @@ fun Page3(
     val scrollState = rememberScrollState()
     val sessions = SessionManager.sessions
     val context = LocalContext.current
-    
+
     val currentRecording = SessionManager.activeRecording
     val isRecording = currentRecording != null
 
@@ -76,10 +77,10 @@ fun Page3(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
-                    text = if (isRecording) "Enregistrement en cours..." else stringResource(R.string.new_session), 
+                    text = if (isRecording) "Enregistrement en cours..." else stringResource(R.string.new_session),
                     style = MaterialTheme.typography.titleMedium
                 )
-                
+
                 if (isRecording) {
                     Text(
                         text = "Points capturés : ${currentRecording?.points?.size ?: 0}",
@@ -88,7 +89,7 @@ fun Page3(
                 }
 
                 Spacer(modifier = Modifier.height(SPACING_MEDIUM))
-                
+
                 Button(
                     onClick = {
                         if (!isRecording) {
@@ -101,12 +102,14 @@ fun Page3(
                     colors = if (isRecording) ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error) else ButtonDefaults.buttonColors()
                 ) {
                     Icon(
-                        imageVector = if (isRecording) Icons.Default.Close else Icons.Default.PlayArrow, 
+                        imageVector = if (isRecording) Icons.Default.Close else Icons.Default.PlayArrow,
                         contentDescription = null
                     )
                     Spacer(modifier = Modifier.width(SPACING_SMALL))
                     Text(
-                        text = if (isRecording) stringResource(R.string.stop_recording) else stringResource(R.string.start_recording)
+                        text = if (isRecording) stringResource(R.string.stop_recording) else stringResource(
+                            R.string.start_recording
+                        )
                     )
                 }
             }
@@ -140,15 +143,30 @@ fun Page3(
                 ListItem(
                     modifier = Modifier.clickable { onSessionClick(session.id) },
                     headlineContent = { Text("${session.name} - ${session.date}") },
-                    supportingContent = { Text(
-                        "${stringResource(R.string.duration_label)} ${session.duration} | ${stringResource(R.string.distance_label)} ${session.distance} | Vitesse moyenne : ${session.averageSpeed}"
-                    )},
-                    trailingContent = {
-                        IconButton(onClick = { /* TODO: Implement export functionality */ }) {
-                            Icon(Icons.Default.Share, contentDescription = stringResource(R.string.export_label))
-                        }
+                    supportingContent = {
+                        Text(
+                            "${stringResource(R.string.duration_label)} ${session.duration} | ${
+                                stringResource(
+                                    R.string.distance_label
+                                )
+                            } ${session.distance} | Vitesse moyenne : ${session.averageSpeed}"
+                        )
                     },
-                    colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surface)
+
+                    trailingContent = {
+                        IconButton(
+                            onClick = {
+                                val file = SessionManager.exportSessionToCsv(context, session)
+                                SessionManager.shareFile(context, file)
+                            }
+                        ) {
+                            Icon(Icons.Default.Share, contentDescription = "Exporter Excel")
+                        }
+
+
+                    },
+
+                        colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surface)
                 )
                 HorizontalDivider()
             }
@@ -163,6 +181,8 @@ fun Page3(
         )
     }
 }
+
+
 
 private val PADDING_MEDIUM = 16.dp
 private val SPACING_SMALL = 8.dp
