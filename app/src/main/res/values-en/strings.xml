@@ -1,6 +1,5 @@
 <resources>
-    <string name="app_name" translatable="false">BlueBoxPro</string>
-    
+
     <!-- Navigation Tabs -->
     <string name="tab_home">Home</string>
     <string name="tab_map">Map</string>
@@ -38,6 +37,7 @@
     <string name="recording_title">Race Recording</string>
     <string name="new_session">New Session</string>
     <string name="start_recording">Start recording</string>
+    <string name="stop_recording">Stop recording</string>
     <string name="recent_saves">Recent saves</string>
     <string name="no_saves">No saves available</string>
     <string name="session_id">Session #</string>
@@ -45,4 +45,10 @@
     <string name="distance_label">Distance:</string>
     <string name="export_label">Export</string>
     <string name="export_info">Data will be exported in CSV or GPX format.</string>
+    <string name="session_details_title">Session details</string>
+    <string name="delete_session_title">Delete session</string>
+    <string name="delete_session_confirmation">Are you sure you want to delete this session? This action is permanent.</string>
+    <string name="delete_label">Delete</string>
+    <string name="cancel_label">Cancel</string>
+    <string name="session_not_found">Session not found</string>
 </resources>
