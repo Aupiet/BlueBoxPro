@@ -29,7 +29,7 @@ import com.example.blueboxpro.Save.Session
 import com.example.blueboxpro.Process.MovementProcessor
 
 /**
- * Composable for the third page of the application, focused on session management.
+ * Composable for the recording page of the application, focused on session management.
  */
 @Composable
 fun Page3(
@@ -84,8 +84,6 @@ fun Page3(
                 )
                 
                 RecordingControlCard(isRecording, currentRecording, sessions.size, context)
-                
-                //Spacer(modifier = Modifier.height(SPACING_MEDIUM))
                 
                 Text(
                     text = stringResource(R.string.export_info),
@@ -217,6 +215,7 @@ private fun HistorySection(
     sessions: List<Session>,
     onSessionClick: (Int) -> Unit
 ) {
+    val context = LocalContext.current
     if (sessions.isEmpty()) {
         Box(
             modifier = Modifier
@@ -236,9 +235,16 @@ private fun HistorySection(
             ListItem(
                 modifier = Modifier.clickable { onSessionClick(session.id) },
                 headlineContent = { Text("${session.name} - ${session.date}") },
-                supportingContent = { Text("${stringResource(R.string.duration_label)} ${session.duration} | ${stringResource(R.string.distance_label)} ${session.distance}") },
+                supportingContent = { 
+                    Text("${stringResource(R.string.duration_label)} ${session.duration} | ${stringResource(R.string.distance_label)} ${session.distance} | Vitesse moyenne : ${session.averageSpeed}") 
+                },
                 trailingContent = {
-                    IconButton(onClick = { /* TODO: Implement export functionality */ }) {
+                    IconButton(
+                        onClick = {
+                            val file = SessionManager.exportSessionToCsv(context, session)
+                            SessionManager.shareFile(context, file)
+                        }
+                    ) {
                         Icon(Icons.Default.Share, contentDescription = stringResource(R.string.export_label))
                     }
                 },
