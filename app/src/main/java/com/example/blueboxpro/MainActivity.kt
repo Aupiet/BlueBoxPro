@@ -172,6 +172,7 @@ class MainActivity : AppCompatActivity() {
                             session = session,
                             onBack = { rootNavController.popBackStack() }
                         )
+
                     }
                 }
             }
