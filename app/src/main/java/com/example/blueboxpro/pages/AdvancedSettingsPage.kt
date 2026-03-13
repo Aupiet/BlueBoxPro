@@ -13,19 +13,28 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.example.blueboxpro.Option
+import com.example.blueboxpro.Process.MovementProcessor
+import com.example.blueboxpro.R
 
 /**
  * Composable for the advanced settings screen.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AdvancedSettingsPage(onBack: () -> Unit) {
+fun AdvancedSettingsPage(
+    processor: MovementProcessor,
+    refreshTrigger: Int,
+    unitSystem: String,
+    onBack: () -> Unit
+) {
     val context = LocalContext.current
     val scrollState = rememberScrollState()
+    val result = remember(refreshTrigger) { processor.getResult(unitSystem) }
 
     // State for all configurable variables
     var gpsTimeout by remember { mutableStateOf(Option.Process.GPS_TIMEOUT_MS.toString()) }
@@ -86,6 +95,30 @@ fun AdvancedSettingsPage(onBack: () -> Unit) {
                 .fillMaxSize()
                 .verticalScroll(scrollState)
         ) {
+            SectionHeader("Actions de maintenance")
+            Button(
+                onClick = { processor.reset() },
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+            ) {
+                Text(stringResource(R.string.reset_button))
+            }
+            Text(
+                text = "Réinitialise tous les états internes, filtres de vitesse et position.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 4.dp, start = 4.dp)
+            )
+
+            HorizontalDivider(modifier = Modifier.padding(vertical = SPACING_MEDIUM))
+
+            SectionHeader("Détails Techniques (Temps Réel)")
+            TechnicalInfoRow("Moyenne (Filtrée)", "${SOG_FORMAT.format(result.getMoyspeed())} ${result.getSpeedUnit()}")
+            TechnicalInfoRow("Source GPS", "${SOG_FORMAT.format(result.getSpeedGPS())} ${result.getSpeedUnit()}")
+            TechnicalInfoRow("Source IMU (Accéléro)", "${SOG_FORMAT.format(result.getSpeedIMU())} ${result.getSpeedUnit()}")
+
+            HorizontalDivider(modifier = Modifier.padding(vertical = SPACING_MEDIUM))
+
             SectionHeader("Traitement & GPS")
             SettingField(
                 label = "Timeout GPS (ms)",
@@ -163,6 +196,17 @@ private fun SectionHeader(title: String) {
 }
 
 @Composable
+private fun TechnicalInfoRow(label: String, value: String) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Text(text = label, style = MaterialTheme.typography.bodyMedium)
+        Text(text = value, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
+    }
+}
+
+@Composable
 private fun SettingField(
     label: String,
     value: String,
@@ -193,3 +237,4 @@ private val PADDING_MEDIUM = 16.dp
 private val SPACING_SMALL = 8.dp
 private val SPACING_MEDIUM = 16.dp
 private val SPACING_LARGE = 24.dp
+private const val SOG_FORMAT = "%.2f"

@@ -45,9 +45,6 @@ fun Page1(
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     MovementDataDisplay(result)
                 }
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    TechnicalDetailsDisplay(result, processor)
-                }
             }
         } else {
             // Portrait Layout: Vertical list using a Column
@@ -63,10 +60,6 @@ fun Page1(
                 Spacer(modifier = Modifier.height(SPACING_LARGE))
                 
                 MovementDataDisplay(result)
-                
-                Spacer(modifier = Modifier.height(SPACING_XLARGE))
-                
-                TechnicalDetailsDisplay(result, processor)
             }
         }
     }
@@ -101,23 +94,6 @@ private fun MovementDataDisplay(result: MovementResult) {
         style = MaterialTheme.typography.headlineMedium,
         color = MaterialTheme.colorScheme.tertiary
     )
-}
-
-@Composable
-private fun TechnicalDetailsDisplay(
-    result: MovementResult,
-    processor: MovementProcessor
-) {
-    Text(text = stringResource(R.string.technical_details), style = MaterialTheme.typography.labelLarge)
-    Text(text = "${stringResource(R.string.average_label)} ${SOG_FORMAT.format(result.getMoyspeed())} ${result.getSpeedUnit()}")
-    Text(text = "${stringResource(R.string.gps_label)} ${SOG_FORMAT.format(result.getSpeedGPS())} ${result.getSpeedUnit()}")
-    Text(text = "${stringResource(R.string.imu_label)} ${SOG_FORMAT.format(result.getSpeedIMU())} ${result.getSpeedUnit()}")
-    
-    Spacer(modifier = Modifier.height(SPACING_LARGE))
-
-    Button(onClick = { processor.reset() }) {
-        Text(stringResource(R.string.reset_button))
-    }
 }
 
 private val PADDING_MEDIUM = 16.dp

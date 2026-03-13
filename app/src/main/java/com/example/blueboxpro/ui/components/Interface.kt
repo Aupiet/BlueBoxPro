@@ -10,7 +10,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -69,7 +68,7 @@ object MapComponents {
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center
                 ) {
-                    LocationInfo(location, result, onBack)
+                    LocationInfo(location, result)
                 }
                 
                 Box(
@@ -99,7 +98,7 @@ object MapComponents {
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center
                 ) {
-                    LocationInfo(location, result, onBack)
+                    LocationInfo(location, result)
                 }
 
                 Box(
@@ -123,7 +122,7 @@ object MapComponents {
     }
 
     @Composable
-    private fun LocationInfo(location: GeoPoint?, result: MovementResult, onBack: () -> Unit) {
+    private fun LocationInfo(location: GeoPoint?, result: MovementResult) {
         if (location != null) {
             Text(text = "Latitude : ${LAT_LON_FORMAT.format(location.latitude)}", style = MaterialTheme.typography.bodyLarge)
             Text(text = "Longitude : ${LAT_LON_FORMAT.format(location.longitude)}", style = MaterialTheme.typography.bodyLarge)
@@ -137,12 +136,6 @@ object MapComponents {
             )
         } else {
             Text(text = stringResource(R.string.gps_not_available), style = MaterialTheme.typography.bodyLarge)
-        }
-        
-        Spacer(modifier = Modifier.height(SPACING_LARGE))
-        
-        Button(onClick = onBack) {
-            Text(stringResource(R.string.reset_button))
         }
     }
 

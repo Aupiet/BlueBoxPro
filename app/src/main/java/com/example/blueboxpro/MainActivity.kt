@@ -159,6 +159,9 @@ class MainActivity : AppCompatActivity() {
                     }
                     composable(ROUTE_ADVANCED_SETTINGS) {
                         AdvancedSettingsPage(
+                            processor = processor,
+                            refreshTrigger = refreshTrigger,
+                            unitSystem = unitSystemKey,
                             onBack = { rootNavController.popBackStack() }
                         )
                     }

@@ -132,22 +132,19 @@ object SessionManager {
     }
 
     /**
-     * Calculates the total distance covered by a list of GPS points.
+     * Calculates the total distance covered by a list of GPS points using the Haversine formula.
      */
     fun calculateDistance(points: List<GpsPoint>): Double {
         if (points.size < 2) return 0.0
         var totalDistance = 0.0
         var lastValidPoint = points[0]
-        val results = FloatArray(1)
 
         for (i in 1 until points.size) {
             val currentPoint = points[i]
-            Location.distanceBetween(
+            val distance = haversine(
                 lastValidPoint.latitude, lastValidPoint.longitude,
-                currentPoint.latitude, currentPoint.longitude,
-                results
+                currentPoint.latitude, currentPoint.longitude
             )
-            val distance = results[0].toDouble()
 
             if (distance >= Option.Save.DISTANCE_THRESHOLD_METERS) {
                 totalDistance += distance
@@ -155,6 +152,20 @@ object SessionManager {
             }
         }
         return totalDistance
+    }
+
+    /**
+     * Calculates the distance in meters between two coordinates.
+     */
+    private fun haversine(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Double {
+        val r = 6371000.0 // Earth radius in meters
+        val dLat = Math.toRadians(lat2 - lat1)
+        val dLon = Math.toRadians(lon2 - lon1)
+        val a = kotlin.math.sin(dLat / 2) * kotlin.math.sin(dLat / 2) +
+                kotlin.math.cos(Math.toRadians(lat1)) * kotlin.math.cos(Math.toRadians(lat2)) *
+                kotlin.math.sin(dLon / 2) * kotlin.math.sin(dLon / 2)
+        val c = 2 * kotlin.math.atan2(kotlin.math.sqrt(a), kotlin.math.sqrt(1 - a))
+        return r * c
     }
 
     /**
