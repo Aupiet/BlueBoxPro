@@ -1,8 +1,10 @@
 /**
- * This class holds the processed movement data and provides methods to access
+ * This file holds the processed movement data and provides methods to access
  * them in various unit systems (Metric, Imperial, Nautical).
  */
 package com.example.blueboxpro.Process
+
+import kotlin.math.round
 
 enum class UnitSystem {
     METRIC_KMH, METRIC_MS, IMPERIAL, NAUTICAL
@@ -33,7 +35,11 @@ class MovementResult(
         private const val MS_TO_KNOTS = 1.94384f
         private const val METERS_TO_FEET = 3.28084
         private const val METERS_TO_FEET_FLOAT = 3.28084f
+        private const val ROUNDING_FACTOR = 10f
     }
+
+    /** Rounds a float value to one decimal place. */
+    private fun Float.roundToOneDecimal(): Float = round(this * ROUNDING_FACTOR) / ROUNDING_FACTOR
 
     /** Returns the X-axis acceleration. */
     fun getAccelX(): Float = accelX
@@ -42,16 +48,16 @@ class MovementResult(
     /** Returns the Z-axis acceleration. */
     fun getAccelZ(): Float = accelZ
 
-    /** Returns the Speed Over Ground in the current unit system. */
-    fun getSog(): Float = convertSpeed(sog)
-    /** Returns the IMU-derived speed in the current unit system. */
-    fun getSpeedIMU(): Float = convertSpeed(speedIMU)
-    /** Returns the GPS-derived speed in the current unit system. */
-    fun getSpeedGPS(): Float = convertSpeed(speedGPS)
-    /** Returns the fused speed in the current unit system. */
-    fun getSpeedFused(): Float = convertSpeed(speedFused)
-    /** Returns the average speed in the current unit system. */
-    fun getMoyspeed(): Float = convertSpeed(moyspeed)
+    /** Returns the Speed Over Ground rounded to one decimal place. */
+    fun getSog(): Float = convertSpeed(sog).roundToOneDecimal()
+    /** Returns the IMU-derived speed rounded to one decimal place. */
+    fun getSpeedIMU(): Float = convertSpeed(speedIMU).roundToOneDecimal()
+    /** Returns the GPS-derived speed rounded to one decimal place. */
+    fun getSpeedGPS(): Float = convertSpeed(speedGPS).roundToOneDecimal()
+    /** Returns the fused speed rounded to one decimal place. */
+    fun getSpeedFused(): Float = convertSpeed(speedFused).roundToOneDecimal()
+    /** Returns the average speed rounded to one decimal place. */
+    fun getMoyspeed(): Float = convertSpeed(moyspeed).roundToOneDecimal()
 
     /** Returns the string representation of the speed unit. */
     fun getSpeedUnit(): String = when (unitSystem) {

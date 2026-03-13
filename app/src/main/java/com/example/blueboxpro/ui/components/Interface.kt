@@ -1,6 +1,10 @@
+/**
+ * This file contains reusable UI components related to maps and spatial data display.
+ */
 package com.example.blueboxpro.ui.components
 
 import android.annotation.SuppressLint
+import android.content.res.Configuration
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -13,10 +17,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import com.example.blueboxpro.Process.MovementProcessor
+import com.example.blueboxpro.Process.MovementResult
 import com.example.blueboxpro.R
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.GeoPoint
@@ -24,9 +30,16 @@ import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.Marker
 
 object MapComponents {
+    private const val MAP_CORNER_RADIUS_DP = 16
+    private const val DEFAULT_ZOOM_LEVEL = 17.0
+    private const val LAT_LON_FORMAT = "%.6f"
+    private const val STAT_FORMAT = "%.1f"
+    private const val PAGE2_INFO_WEIGHT = 2f
+    private const val PAGE2_MAP_WEIGHT = 1f
+    private const val MAP_WIDTH_FRACTION = 0.9f
 
     /**
-     * Layout spécifique pour la Page 2 évitant les chevauchements.
+     * Specialized layout for Page 2, displaying GPS coordinates and a mini-map.
      */
     @Composable
     fun Page2Layout(
@@ -37,63 +50,109 @@ object MapComponents {
         onMapClick: () -> Unit
     ) {
         val result = processor.getResult(unitSystem)
+        val configuration = LocalConfiguration.current
+        val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
         
-        Column(
-            modifier = Modifier.fillMaxSize(),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(2f)
-                    .padding(16.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center
+        if (isLandscape) {
+            // Landscape Layout: Data on the left, Map on the right
+            Row(
+                modifier = Modifier.fillMaxSize().padding(PADDING_MEDIUM),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                if (location != null) {
-                    Text(text = "Latitude : ${"%.6f".format(location.latitude)}", style = MaterialTheme.typography.bodyLarge)
-                    Text(text = "Longitude : ${"%.6f".format(location.longitude)}", style = MaterialTheme.typography.bodyLarge)
-                    Text(text = "${stringResource(R.string.altitude_label)} ${"%.1f".format(result.getAltitude())} ${result.getAltitudeUnit()}", style = MaterialTheme.typography.bodyLarge)
-                    Text(text = "${stringResource(R.string.accuracy_label)} ${"%.1f".format(result.getAccuracy())} ${result.getAccuracyUnit()}", style = MaterialTheme.typography.bodyLarge)
-                } else {
-                    Text(text = stringResource(R.string.gps_not_available), style = MaterialTheme.typography.bodyLarge)
+                Column(
+                    modifier = Modifier.weight(1f),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    LocationInfo(location, result, onBack)
                 }
                 
-                Spacer(modifier = Modifier.height(24.dp))
-                
-                Button(onClick = onBack) {
-                    Text(stringResource(R.string.reset_button)) // On utilise reset_button car c'est "Retour/Back" dans ce contexte ? 
-                    // Note: Il serait préférable d'ajouter une string spécifique "back_button"
+                Box(
+                    modifier = Modifier.weight(1f),
+                    contentAlignment = Alignment.Center
+                ) {
+                    ReusableMapCard(
+                        location = location,
+                        widthFraction = 1f,
+                        heightFraction = 0.9f,
+                        isLocked = true,
+                        autoCenter = true, 
+                        onClick = onMapClick
+                    )
                 }
             }
-
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f)
-                    .padding(bottom = 16.dp),
-                contentAlignment = Alignment.Center
+        } else {
+            // Portrait Layout: Vertical (Data top, Map bottom)
+            Column(
+                modifier = Modifier.fillMaxSize(),
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                ReusableMapCard(
-                    location = location,
-                    widthFraction = 0.9f,
-                    heightFraction = 1f,
-                    isLocked = true,
-                    autoCenter = true, 
-                    onClick = onMapClick
-                )
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(PAGE2_INFO_WEIGHT)
+                        .padding(PADDING_MEDIUM),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    LocationInfo(location, result, onBack)
+                }
+
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(PAGE2_MAP_WEIGHT)
+                        .padding(bottom = PADDING_MEDIUM),
+                    contentAlignment = Alignment.Center
+                ) {
+                    ReusableMapCard(
+                        location = location,
+                        widthFraction = MAP_WIDTH_FRACTION,
+                        heightFraction = 1f,
+                        isLocked = true,
+                        autoCenter = true, 
+                        onClick = onMapClick
+                    )
+                }
             }
         }
     }
 
     @Composable
+    private fun LocationInfo(location: GeoPoint?, result: MovementResult, onBack: () -> Unit) {
+        if (location != null) {
+            Text(text = "Latitude : ${LAT_LON_FORMAT.format(location.latitude)}", style = MaterialTheme.typography.bodyLarge)
+            Text(text = "Longitude : ${LAT_LON_FORMAT.format(location.longitude)}", style = MaterialTheme.typography.bodyLarge)
+            Text(
+                text = "${stringResource(R.string.altitude_label)} ${STAT_FORMAT.format(result.getAltitude())} ${result.getAltitudeUnit()}", 
+                style = MaterialTheme.typography.bodyLarge
+            )
+            Text(
+                text = "${stringResource(R.string.accuracy_label)} ${STAT_FORMAT.format(result.getAccuracy())} ${result.getAccuracyUnit()}", 
+                style = MaterialTheme.typography.bodyLarge
+            )
+        } else {
+            Text(text = stringResource(R.string.gps_not_available), style = MaterialTheme.typography.bodyLarge)
+        }
+        
+        Spacer(modifier = Modifier.height(SPACING_LARGE))
+        
+        Button(onClick = onBack) {
+            Text(stringResource(R.string.reset_button))
+        }
+    }
+
+    /**
+     * A reusable card component that displays a map inside a clipped container.
+     */
+    @Composable
     fun ReusableMapCard(
         location: GeoPoint?,
         modifier: Modifier = Modifier,
-        widthFraction: Float = 0.9f,
+        widthFraction: Float = MAP_WIDTH_FRACTION,
         heightFraction: Float = 1f,
         alignment: Alignment = Alignment.Center,
-        cornerRadius: Int = 16,
+        cornerRadius: Int = MAP_CORNER_RADIUS_DP,
         isLocked: Boolean = true,
         autoCenter: Boolean = true,
         onClick: (() -> Unit)? = null
@@ -127,12 +186,15 @@ object MapComponents {
         }
     }
 
+    /**
+     * The core map container using the Osmdroid MapView via AndroidView interop.
+     */
     @SuppressLint("ClickableViewAccessibility")
     @Composable
     fun MapContainer(
         location: GeoPoint?,
         modifier: Modifier = Modifier,
-        zoomLevel: Double = 17.0,
+        zoomLevel: Double = DEFAULT_ZOOM_LEVEL,
         isLocked: Boolean = true,
         autoCenter: Boolean = true
     ) {
@@ -156,7 +218,6 @@ object MapComponents {
                     val marker = Marker(mapView)
                     marker.position = geoPoint
                     marker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
-                    // Note: On pourrait aussi traduire "Ma position"
                     marker.title = "Position" 
                     mapView.overlays.add(marker)
                     mapView.invalidate()
@@ -165,4 +226,7 @@ object MapComponents {
             modifier = modifier
         )
     }
+
+    private val PADDING_MEDIUM = 16.dp
+    private val SPACING_LARGE = 24.dp
 }

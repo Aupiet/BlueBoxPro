@@ -50,4 +50,12 @@
     <string name="distance_label">Distance :</string>
     <string name="export_label">Exporter</string>
     <string name="export_info">Les données seront exportées au format CSV ou GPX.</string>
+
+    <!-- Session Detail Page -->
+    <string name="session_details_title">Détails de la session</string>
+    <string name="delete_session_title">Supprimer la session</string>
+    <string name="delete_session_confirmation">Êtes-vous sûr de vouloir supprimer cette session ? Cette action est irréversible.</string>
+    <string name="delete_label">Supprimer</string>
+    <string name="cancel_label">Annuler</string>
+    <string name="session_not_found">Session non trouvée</string>
 </resources>

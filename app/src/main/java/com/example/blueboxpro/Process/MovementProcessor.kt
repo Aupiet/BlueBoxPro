@@ -1,6 +1,6 @@
 /**
  * This class processes motion data from sensors (accelerometer, GPS, compass)
- * to estimate speed, orientation, and location using Kalman filtering and ZUPT logic.
+ * to estimate speed and orientation using an Extended Kalman Filter (EKF) and Low Pass Filtering.
  */
 package com.example.blueboxpro.Process
 
@@ -12,28 +12,30 @@ class MovementProcessor {
     companion object {
         private const val GPS_TIMEOUT_MS = 5000L
         private const val MIN_GPS_ACCURACY = 50f
-        private const val SPEED_THRESHOLD_IMU = 0.5f
-        private const val SPEED_THRESHOLD_GPS = 0.5f
-        private const val ZUPT_ACCEL_THRESHOLD = 0.15f
-        private const val STATIONARY_SAMPLES_REQUIRED = 20
-        private const val HPF_ALPHA = 0.98f
+        private const val MAX_ACCEPTABLE_ACCURACY = 10f
         private const val AZIMUTH_ALPHA = 0.15f
         private const val SPEED_HISTORY_SIZE = 10
         private const val FULL_CIRCLE_DEGREES = 360f
         private const val HALF_CIRCLE_DEGREES = 180f
-        private const val LOW_SPEED_RATIO_THRESHOLD = 0.1f
+        
+        // EKF & Filter Constants
+        private const val CALCULATION_FREQUENCY_HZ = 50f
+        private const val FIXED_DT = 1f / CALCULATION_FREQUENCY_HZ
+        private const val LPF_ACCEL_ALPHA = 0.1f
+        private const val Q_VEL = 0.001f
+        private const val Q_BIAS = 0.0001f
+        private const val R_BASE_GPS = 0.1f
     }
 
-    val kalmanX = SimpleKalmanFilter()
-    val kalmanY = SimpleKalmanFilter()
-    val kalmanZ = SimpleKalmanFilter()
-
+    private val ekfEstimator = EkfSpeedEstimator(qVel = Q_VEL, qBias = Q_BIAS)
+    private var lastFilteredAccel = 0f
+    
     var accelX: Float = 0f
     var accelY: Float = 0f
     var accelZ: Float = 0f
+
     var speedIMU: Float = 0f
     var speedGPS: Float = 0f
-    var speedFused: Float = 0f
     private val speeds = FloatArray(SPEED_HISTORY_SIZE)
     var moyspeed: Float = 0f
 
@@ -42,15 +44,16 @@ class MovementProcessor {
     var gpsAccuracy: Float = 0f
     
     private var lastGpsUpdateMillis: Long = 0L
+    private var timeAccumulator = 0f
 
-    var sog: Float = 0f // Speed Over Ground
-    var cog: Float = 0f // Course Over Ground
+    var sog: Float = 0f
+    var cog: Float = 0f
     
     var azimuth: Float = 0f
     var moyaz: Float = 0f
 
     /**
-     * Converts current movement state into a MovementResult based on the selected unit system.
+     * Converts current movement state into a MovementResult.
      */
     fun getResult(unitSystemStr: String): MovementResult {
         val unitSystem = when {
@@ -67,7 +70,7 @@ class MovementProcessor {
             accelZ = accelZ,
             speedIMU = speedIMU,
             speedGPS = speedGPS,
-            speedFused = speedFused,
+            speedFused = ekfEstimator.velocity,
             moyspeed = moyspeed,
             sog = sog,
             cog = cog,
@@ -78,7 +81,7 @@ class MovementProcessor {
     }
 
     /**
-     * Processes raw acceleration data to estimate speed via integration and Kalman filtering.
+     * Processes acceleration at 50Hz using the EKF estimator.
      */
     fun processAcceleration(ax: Float, ay: Float, az: Float, dt: Float) {
         checkGpsTimeout()
@@ -87,39 +90,21 @@ class MovementProcessor {
         accelY = ay
         accelZ = az
 
-        val accelMag = sqrt(ax * ax + ay * ay + az * az)
-        if (accelMag < ZUPT_ACCEL_THRESHOLD) {
-            stationaryCount++
-        } else {
-            stationaryCount = 0
-        }
+        val rawMag = sqrt(ax * ax + ay * ay + az * az)
+        val filteredMag = LPF_ACCEL_ALPHA * rawMag + (1f - LPF_ACCEL_ALPHA) * lastFilteredAccel
+        lastFilteredAccel = filteredMag
 
-        if (stationaryCount >= STATIONARY_SAMPLES_REQUIRED) {
-            kalmanX.x = 0f
-            kalmanY.x = 0f
-            kalmanZ.x = 0f
-        } else {
-            kalmanX.predict(ax, dt)
-            kalmanY.predict(ay, dt)
-            kalmanZ.predict(az, dt)
-
-            kalmanX.x *= HPF_ALPHA
-            kalmanY.x *= HPF_ALPHA
-            kalmanZ.x *= HPF_ALPHA
-        }
-
-        val rawSpeedIMU = sqrt(kalmanX.x * kalmanX.x + kalmanY.x * kalmanY.x + kalmanZ.x * kalmanZ.x)
-        speedIMU = if (rawSpeedIMU < SPEED_THRESHOLD_IMU) 0f else rawSpeedIMU
-        speedFused = if (rawSpeedIMU < SPEED_THRESHOLD_IMU) 0f else rawSpeedIMU
+        timeAccumulator += dt
         
-        updateSpeedAverage(speedFused)
+        while (timeAccumulator >= FIXED_DT) {
+            ekfEstimator.predict(filteredMag, FIXED_DT)
+            timeAccumulator -= FIXED_DT
+        }
+        
+        speedIMU = ekfEstimator.velocity
+        updateSpeedAverage(ekfEstimator.velocity)
     }
 
-    private var stationaryCount = 0
-
-    /**
-     * Updates the running average of the speed.
-     */
     private fun updateSpeedAverage(currentSpeed: Float) {
         for (i in 0 until speeds.size - 1) {
             speeds[i] = speeds[i + 1]
@@ -129,9 +114,6 @@ class MovementProcessor {
         sog = moyspeed
     }
 
-    /**
-     * Resets GPS speed if no update has been received for a certain duration.
-     */
     private fun checkGpsTimeout() {
         if (lastGpsUpdateMillis != 0L && System.currentTimeMillis() - lastGpsUpdateMillis > GPS_TIMEOUT_MS) {
             speedGPS = 0f
@@ -140,7 +122,7 @@ class MovementProcessor {
     }
 
     /**
-     * Updates the processor state with fresh GPS data.
+     * Updates EKF state using GPS data as the reference.
      */
     fun updateWithGPS(lat: Double, lon: Double, alt: Double, gpsS: Float, gpsBearing: Float, accuracy: Float, onUpdate: () -> Unit) {
         if (accuracy > MIN_GPS_ACCURACY) {
@@ -152,35 +134,20 @@ class MovementProcessor {
         lastGpsUpdateMillis = System.currentTimeMillis()
         lastLocation = GeoPoint(lat, lon)
         altitude = alt
-        speedGPS = if (gpsS < SPEED_THRESHOLD_GPS) 0f else gpsS
+        speedGPS = gpsS
         gpsAccuracy = accuracy
         
-        if (gpsS > SPEED_THRESHOLD_GPS) {
+        if (gpsS > 0.5f) {
             cog = gpsBearing
         }
 
-        val currentIMUSpeed = sqrt(kalmanX.x * kalmanX.x + kalmanY.x * kalmanY.x + kalmanZ.x * kalmanZ.x)
-        if (currentIMUSpeed > LOW_SPEED_RATIO_THRESHOLD) {
-            val ratio = gpsS / currentIMUSpeed
-            kalmanX.update(kalmanX.x * ratio)
-            kalmanY.update(kalmanY.x * ratio)
-            kalmanZ.update(kalmanZ.x * ratio)
-        } else {
-            kalmanX.update(0f)
-            kalmanY.update(0f)
-            kalmanZ.update(0f)
-        }
+        val rGps = R_BASE_GPS * (accuracy / MAX_ACCEPTABLE_ACCURACY).coerceAtLeast(1f)
+        ekfEstimator.update(gpsS, rGps)
         
-        val rawSpeedFused = sqrt(kalmanX.x * kalmanX.x + kalmanY.x * kalmanY.x + kalmanZ.x * kalmanZ.x)
-        speedFused = if (rawSpeedFused < SPEED_THRESHOLD_GPS) 0f else rawSpeedFused
-        
-        updateSpeedAverage(speedFused)
+        updateSpeedAverage(ekfEstimator.velocity)
         onUpdate()
     }
 
-    /**
-     * Updates the azimuth (compass orientation) with smoothing.
-     */
     fun updateOrientation(newaz: Float, onUpdate: () -> Unit) {
         var diffaz: Float = newaz - moyaz
 
@@ -196,19 +163,17 @@ class MovementProcessor {
     }
 
     /**
-     * Resets all internal states of the movement processor.
+     * Resets all internal states, including the EKF estimator.
      */
     fun reset() {
-        kalmanX.x = 0f
-        kalmanY.x = 0f
-        kalmanZ.x = 0f
-        stationaryCount = 0
+        ekfEstimator.reset()
+        lastFilteredAccel = 0f
+        timeAccumulator = 0f
         accelX = 0f
         accelY = 0f
         accelZ = 0f
         speedIMU = 0f
         speedGPS = 0f
-        speedFused = 0f
         sog = 0f
         cog = 0f
         azimuth = 0f
