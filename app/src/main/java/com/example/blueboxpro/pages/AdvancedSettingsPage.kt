@@ -1,5 +1,7 @@
 /**
- * This page provides advanced configuration options for sensor thresholds and filtering parameters.
+ * This page provides advanced configuration options for sensor thresholds, 
+ * filtering parameters, and system-level settings.
+ * It allows direct modification of the global Option singleton.
  */
 package com.example.blueboxpro.pages
 
@@ -22,7 +24,14 @@ import com.example.blueboxpro.Process.MovementProcessor
 import com.example.blueboxpro.R
 
 /**
- * Composable for the advanced settings screen.
+ * The Advanced Settings screen.
+ * 
+ * Provides granular control over the application's processing logic.
+ * 
+ * @param processor The movement processor instance (used for reset action).
+ * @param refreshTrigger Trigger used to fetch latest snapshot of processed data.
+ * @param unitSystem The current unit system.
+ * @param onBack Callback for back navigation.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -36,7 +45,7 @@ fun AdvancedSettingsPage(
     val scrollState = rememberScrollState()
     val result = remember(refreshTrigger) { processor.getResult(unitSystem) }
 
-    // State for all configurable variables
+    // State for all configurable variables (bound to UI text fields)
     var gpsTimeout by remember { mutableStateOf(Option.Process.GPS_TIMEOUT_MS.toString()) }
     var minGpsAccuracy by remember { mutableStateOf(Option.Process.MIN_GPS_ACCURACY.toString()) }
     var maxAcceptableAccuracy by remember { mutableStateOf(Option.Process.MAX_ACCEPTABLE_ACCURACY.toString()) }
@@ -53,16 +62,19 @@ fun AdvancedSettingsPage(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Paramètres Avancés") },
+                title = { Text(stringResource(R.string.advanced_settings_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Retour")
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack, 
+                            contentDescription = stringResource(R.string.content_desc_back)
+                        )
                     }
                 },
                 actions = {
                     TextButton(onClick = {
-                        // Apply and Save
                         try {
+                            // Update global options
                             Option.Process.GPS_TIMEOUT_MS = gpsTimeout.toLong()
                             Option.Process.MIN_GPS_ACCURACY = minGpsAccuracy.toFloat()
                             Option.Process.MAX_ACCEPTABLE_ACCURACY = maxAcceptableAccuracy.toFloat()
@@ -76,13 +88,14 @@ fun AdvancedSettingsPage(
                             Option.Save.DISTANCE_THRESHOLD_METERS = distanceThreshold.toDouble()
                             Option.Save.RECORDING_FREQUENCY_HZ = recordingFrequency.toFloat()
                             
+                            // Persist to storage
                             Option.save(context)
                             onBack()
                         } catch (e: Exception) {
-                            // Handle parsing error (could show a Toast)
+                            // Invalid input handling could be added here
                         }
                     }) {
-                        Text("ENREGISTRER", color = MaterialTheme.colorScheme.primary)
+                        Text(stringResource(R.string.button_save), color = MaterialTheme.colorScheme.primary)
                     }
                 }
             )
@@ -95,7 +108,8 @@ fun AdvancedSettingsPage(
                 .fillMaxSize()
                 .verticalScroll(scrollState)
         ) {
-            SectionHeader("Actions de maintenance")
+            // --- Maintenance ---
+            SectionHeader(stringResource(R.string.maintenance_actions))
             Button(
                 onClick = { processor.reset() },
                 modifier = Modifier.fillMaxWidth(),
@@ -104,7 +118,7 @@ fun AdvancedSettingsPage(
                 Text(stringResource(R.string.reset_button))
             }
             Text(
-                text = "Réinitialise tous les états internes, filtres de vitesse et position.",
+                text = stringResource(R.string.reset_description),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(top = 4.dp, start = 4.dp)
@@ -112,71 +126,75 @@ fun AdvancedSettingsPage(
 
             HorizontalDivider(modifier = Modifier.padding(vertical = SPACING_MEDIUM))
 
-            SectionHeader("Détails Techniques (Temps Réel)")
-            TechnicalInfoRow("Moyenne (Filtrée)", "${SOG_FORMAT.format(result.getMoyspeed())} ${result.getSpeedUnit()}")
-            TechnicalInfoRow("Source GPS", "${SOG_FORMAT.format(result.getSpeedGPS())} ${result.getSpeedUnit()}")
-            TechnicalInfoRow("Source IMU (Accéléro)", "${SOG_FORMAT.format(result.getSpeedIMU())} ${result.getSpeedUnit()}")
+            // --- Real-time debug info ---
+            SectionHeader(stringResource(R.string.header_realtime_tech))
+            TechnicalInfoRow(stringResource(R.string.label_filtered_avg), "${SOG_FORMAT.format(result.getMoyspeed())} ${result.getSpeedUnit()}")
+            TechnicalInfoRow(stringResource(R.string.label_gps_source), "${SOG_FORMAT.format(result.getSpeedGPS())} ${result.getSpeedUnit()}")
+            TechnicalInfoRow(stringResource(R.string.label_imu_source), "${SOG_FORMAT.format(result.getSpeedIMU())} ${result.getSpeedUnit()}")
 
             HorizontalDivider(modifier = Modifier.padding(vertical = SPACING_MEDIUM))
 
-            SectionHeader("Traitement & GPS")
+            // --- GPS & Processing Params ---
+            SectionHeader(stringResource(R.string.header_processing_gps))
             SettingField(
-                label = "Timeout GPS (ms)",
+                label = stringResource(R.string.label_gps_timeout),
                 value = gpsTimeout,
                 onValueChange = { gpsTimeout = it },
-                description = "Temps avant de considérer le signal GPS comme perdu (par défaut 5000ms)."
+                description = stringResource(R.string.desc_gps_timeout)
             )
             SettingField(
-                label = "Précision GPS Min (m)",
+                label = stringResource(R.string.label_min_gps_accuracy),
                 value = minGpsAccuracy,
                 onValueChange = { minGpsAccuracy = it },
-                description = "Seuil au-delà duquel les données GPS sont ignorées car trop imprécises."
+                description = stringResource(R.string.desc_min_gps_accuracy)
             )
             SettingField(
-                label = "Lissage Azimut (Alpha)",
+                label = stringResource(R.string.label_azimuth_alpha),
                 value = azimuthAlpha,
                 onValueChange = { azimuthAlpha = it },
-                description = "Facteur de lissage pour la boussole (0.0 à 1.0). Plus bas = plus stable mais plus lent."
+                description = stringResource(R.string.desc_azimuth_alpha)
             )
             SettingField(
-                label = "Taille historique vitesse",
+                label = stringResource(R.string.label_speed_hist_size),
                 value = speedHistorySize,
                 onValueChange = { speedHistorySize = it },
-                description = "Nombre de points utilisés pour calculer la vitesse moyenne en temps réel.",
+                description = stringResource(R.string.desc_speed_hist_size),
                 isInteger = true
             )
 
             HorizontalDivider(modifier = Modifier.padding(vertical = SPACING_MEDIUM))
 
-            SectionHeader("Calculs & Affichage")
+            // --- Calculation Params ---
+            SectionHeader(stringResource(R.string.header_calc_display))
             SettingField(
-                label = "Facteur d'arrondi",
+                label = stringResource(R.string.label_rounding_factor),
                 value = roundingFactor,
                 onValueChange = { roundingFactor = it },
-                description = "10 = 1 décale, 100 = 2 décimales. Définit la précision de l'affichage."
+                description = stringResource(R.string.desc_rounding_factor)
             )
 
             HorizontalDivider(modifier = Modifier.padding(vertical = SPACING_MEDIUM))
 
-            SectionHeader("Sauvegarde & Fichiers")
+            // --- Storage Params ---
+            SectionHeader(stringResource(R.string.header_save_files))
             SettingField(
-                label = "Nom du fichier JSON",
+                label = stringResource(R.string.label_json_filename),
                 value = fileName,
                 onValueChange = { fileName = it },
-                description = "Nom du fichier utilisé pour stocker l'historique des sessions.",
+                description = stringResource(R.string.desc_json_filename),
                 keyboardType = KeyboardType.Text
             )
             SettingField(
-                label = "Seuil de distance (m)",
+                label = stringResource(R.string.label_dist_threshold),
                 value = distanceThreshold,
                 onValueChange = { distanceThreshold = it },
-                description = "Distance minimale entre deux points pour qu'ils soient comptabilisés dans le trajet."
+                description = stringResource(R.string.desc_dist_threshold)
             )
             SettingField(
-                label = "Fréquence d'enregistrement (Hz)",
+                label = stringResource(R.string.label_recording_freq),
                 value = recordingFrequency,
                 onValueChange = { recordingFrequency = it },
-                description = "Nombre de points enregistrés par seconde (ex: 1.0 = 1 point/sec, 5.0 = 5 points/sec)."
+                description = stringResource(R.string.desc_recording_freq)
             )
             
             Spacer(modifier = Modifier.height(SPACING_LARGE))
@@ -184,6 +202,9 @@ fun AdvancedSettingsPage(
     }
 }
 
+/**
+ * Renders a bold section header.
+ */
 @Composable
 private fun SectionHeader(title: String) {
     Text(
@@ -195,6 +216,9 @@ private fun SectionHeader(title: String) {
     )
 }
 
+/**
+ * Displays a technical key-value pair.
+ */
 @Composable
 private fun TechnicalInfoRow(label: String, value: String) {
     Row(
@@ -206,6 +230,9 @@ private fun TechnicalInfoRow(label: String, value: String) {
     }
 }
 
+/**
+ * A specialized text field for settings input with a label and help description.
+ */
 @Composable
 private fun SettingField(
     label: String,

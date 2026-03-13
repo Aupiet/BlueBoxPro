@@ -1,5 +1,6 @@
 /**
  * This page provides a full-screen map view with manual recentering capability.
+ * It uses the reusable MapContainer from MapComponents.
  */
 package com.example.blueboxpro.pages
 
@@ -11,12 +12,20 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.example.blueboxpro.ui.components.MapComponents
+import com.example.blueboxpro.R
 import org.osmdroid.util.GeoPoint
 
 /**
- * Composable that displays a full-screen map.
+ * Composable that displays a full-screen interactive map.
+ * 
+ * Includes a back button to return to the previous screen and a recenter button
+ * to snap the camera back to the current user location.
+ * 
+ * @param location The current GPS location to display and center on.
+ * @param onBack Callback invoked when the user taps the back button.
  */
 @Composable
 fun Page4(location: GeoPoint?, onBack: () -> Unit) {
@@ -39,7 +48,10 @@ fun Page4(location: GeoPoint?, onBack: () -> Unit) {
                 .align(Alignment.BottomStart),
             containerColor = MaterialTheme.colorScheme.secondary
         ) {
-            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Retour")
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.ArrowBack, 
+                contentDescription = stringResource(R.string.content_desc_back)
+            )
         }
 
         FloatingActionButton(
@@ -49,7 +61,10 @@ fun Page4(location: GeoPoint?, onBack: () -> Unit) {
                 .align(Alignment.BottomEnd),
             containerColor = MaterialTheme.colorScheme.primary
         ) {
-            Icon(Icons.Default.LocationOn, contentDescription = "Recentrer")
+            Icon(
+                imageVector = Icons.Default.LocationOn, 
+                contentDescription = stringResource(R.string.content_desc_recenter)
+            )
         }
     }
 }

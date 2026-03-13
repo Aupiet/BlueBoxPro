@@ -1,5 +1,7 @@
 /**
- * This file contains reusable UI components related to maps and spatial data display.
+ * Reusable UI components for map displays, navigation panels, and spatial data visualization.
+ * This file provides specialized components like a circular map with an integrated compass,
+ * as well as generic map containers using Osmdroid.
  */
 package com.example.blueboxpro.ui.components
 
@@ -30,6 +32,7 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.font.FontWeight
@@ -41,6 +44,8 @@ import com.example.blueboxpro.Process.MovementProcessor
 import com.example.blueboxpro.Process.MovementResult
 import com.example.blueboxpro.Save.GpsPoint
 import com.example.blueboxpro.Save.SessionManager
+import com.example.blueboxpro.R
+import com.example.blueboxpro.Option
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.BoundingBox
 import org.osmdroid.util.GeoPoint
@@ -51,6 +56,9 @@ import kotlin.math.cos
 import kotlin.math.min
 import kotlin.math.sin
 
+/**
+ * Collection of map-related UI components.
+ */
 object MapComponents {
     private const val MAP_CORNER_RADIUS_DP = 16
     private const val DEFAULT_ZOOM_LEVEL = 17.0
@@ -61,13 +69,41 @@ object MapComponents {
     private const val STAT_FORMAT = "%.1f"
     private const val DEGREE_FORMAT = "%.0f"
 
-    // Compass constants
     private const val COMPASS_RING_WIDTH_RATIO = 0.12f
     private const val COMPASS_ANIM_DURATION_MS = 300
+    
+    // Drawing constants
+    private const val COMPASS_BACKGROUND_ALPHA = 0.75f
+    private const val COMPASS_BORDER_ALPHA = 0.3f
+    private const val COMPASS_BORDER_WIDTH = 1.5f
+    private const val COMPASS_TICK_STEP = 5
+    private const val COMPASS_MAJOR_TICK_STEP = 30
+    private const val COMPASS_MID_TICK_STEP = 10
+    
+    private const val COMPASS_MAJOR_TICK_LENGTH_RATIO = 0.15f
+    private const val COMPASS_MID_TICK_LENGTH_RATIO = 0.3f
+    private const val COMPASS_MINOR_TICK_LENGTH_RATIO = 0.45f
+    private const val COMPASS_TICK_OUTER_GAP_RATIO = 0.05f
+    
+    private const val COMPASS_MAJOR_TICK_WIDTH = 2.5f
+    private const val COMPASS_MINOR_TICK_WIDTH = 1.0f
+    
+    private const val INDICATOR_OFFSET_PX = 4f
+    private const val INDICATOR_HALF_WIDTH_PX = 8f
+    
+    private const val TRACE_LINE_WIDTH = 6f
+    private const val SESSION_TRACE_LINE_WIDTH = 8f
+    private const val OUTLINE_STROKE_WIDTH = 3f
+    
+    private const val POSITION_MARKER_SIZE = 60
+    private const val TRIANGLE_TOP_MARGIN_RATIO = 0.15f
+    private const val TRIANGLE_SIDE_MARGIN_RATIO = 0.25f
+    private const val TRIANGLE_BOTTOM_MARGIN_RATIO = 0.8f
+    
+    private val DIVIDER_PADDING_VERTICAL = 4.dp
 
     /**
-     * Page 2 layout: circular map with compass ring overlay,
-     * triangle position marker, live trace, and info panel below.
+     * Main layout for the navigation/map page.
      */
     @Composable
     fun Page2Layout(
@@ -87,7 +123,6 @@ object MapComponents {
                 .padding(PADDING_MEDIUM),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // --- Circular Map + Compass ---
             Box(
                 modifier = Modifier
                     .weight(1f)
@@ -105,14 +140,12 @@ object MapComponents {
 
             Spacer(modifier = Modifier.height(SPACING_MEDIUM))
 
-            // --- Navigation Info Panel ---
             NavigationInfoPanel(location, result)
         }
     }
 
     /**
-     * Circular clipped map with a compass rose overlaid around its edge.
-     * Position is shown as a triangle oriented toward COG.
+     * Circular clipped map with a compass rose overlaid.
      */
     @SuppressLint("ClickableViewAccessibility")
     @Composable
@@ -123,12 +156,6 @@ object MapComponents {
         recordingPoints: List<GpsPoint>,
         onMapClick: () -> Unit
     ) {
-        // Smooth animation for compass rotation
-        val animatedAzimuth by animateFloatAsState(
-            targetValue = azimuth,
-            animationSpec = tween(durationMillis = COMPASS_ANIM_DURATION_MS),
-            label = "azimuth"
-        )
         val animatedCog by animateFloatAsState(
             targetValue = cog,
             animationSpec = tween(durationMillis = COMPASS_ANIM_DURATION_MS),
@@ -145,7 +172,6 @@ object MapComponents {
             modifier = Modifier.fillMaxSize(),
             contentAlignment = Alignment.Center
         ) {
-            // 1) Circular clipped osmdroid map
             Box(
                 modifier = Modifier
                     .fillMaxSize()
@@ -162,27 +188,24 @@ object MapComponents {
                         }
                     },
                     update = { mapView ->
-                        // Heading-up: rotate the map so direction of travel is always up
                         mapView.mapOrientation = -animatedCog
                         mapView.overlays.clear()
 
-                        // Live trace polyline
                         if (recordingPoints.isNotEmpty()) {
                             val tracePoints = recordingPoints.map { GeoPoint(it.latitude, it.longitude) }
                             val polyline = Polyline().apply {
                                 setPoints(tracePoints)
                                 outlinePaint.color = AndroidColor.rgb(33, 150, 243)
-                                outlinePaint.strokeWidth = 6f
+                                outlinePaint.strokeWidth = TRACE_LINE_WIDTH
                             }
                             mapView.overlays.add(polyline)
                         }
 
-                        // Position marker (triangle always pointing up)
                         location?.let { geoPoint ->
                             mapView.controller.animateTo(geoPoint)
 
                             val triangleBitmap = createTriangleBitmap(
-                                size = 60,
+                                size = POSITION_MARKER_SIZE,
                                 rotation = 0f,
                                 color = primaryColor.toArgb()
                             )
@@ -199,7 +222,6 @@ object MapComponents {
                     },
                     modifier = Modifier.fillMaxSize()
                 )
-                // Transparent overlay to handle click (map consumes touch events)
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
@@ -208,7 +230,6 @@ object MapComponents {
                 )
             }
 
-            // 2) Compass ring overlay (drawn on Canvas on top of the map)
             Canvas(modifier = Modifier.fillMaxSize()) {
                 val cx = size.width / 2
                 val cy = size.height / 2
@@ -217,37 +238,34 @@ object MapComponents {
                 val midRadius = outerRadius - ringWidth / 2
                 val innerRadius = outerRadius - ringWidth
 
-                // Semi-transparent ring background
                 drawCircle(
-                    color = surfaceColor.copy(alpha = 0.75f),
+                    color = surfaceColor.copy(alpha = COMPASS_BACKGROUND_ALPHA),
                     radius = outerRadius,
                     center = Offset(cx, cy),
                     style = Stroke(width = ringWidth)
                 )
 
-                // Outer and inner ring borders
                 drawCircle(
-                    color = onSurfaceColor.copy(alpha = 0.3f),
+                    color = onSurfaceColor.copy(alpha = COMPASS_BORDER_ALPHA),
                     radius = outerRadius,
                     center = Offset(cx, cy),
-                    style = Stroke(width = 1.5f)
+                    style = Stroke(width = COMPASS_BORDER_WIDTH)
                 )
                 drawCircle(
-                    color = onSurfaceColor.copy(alpha = 0.3f),
+                    color = onSurfaceColor.copy(alpha = COMPASS_BORDER_ALPHA),
                     radius = innerRadius,
                     center = Offset(cx, cy),
-                    style = Stroke(width = 1.5f)
+                    style = Stroke(width = COMPASS_BORDER_WIDTH)
                 )
 
-                // Tick marks (rotate with COG so heading direction is always up)
-                for (i in 0 until 360 step 5) {
+                for (i in 0 until 360 step COMPASS_TICK_STEP) {
                     val angleRad = Math.toRadians((i - animatedCog).toDouble()).toFloat()
-                    val isMajor = i % 30 == 0
-                    val isMid = i % 10 == 0
-                    val tickInner = if (isMajor) innerRadius + ringWidth * 0.15f
-                                    else if (isMid) innerRadius + ringWidth * 0.3f
-                                    else innerRadius + ringWidth * 0.45f
-                    val tickOuter = outerRadius - ringWidth * 0.05f
+                    val isMajor = i % COMPASS_MAJOR_TICK_STEP == 0
+                    val isMid = i % COMPASS_MID_TICK_STEP == 0
+                    val tickInner = if (isMajor) innerRadius + ringWidth * COMPASS_MAJOR_TICK_LENGTH_RATIO
+                                    else if (isMid) innerRadius + ringWidth * COMPASS_MID_TICK_LENGTH_RATIO
+                                    else innerRadius + ringWidth * COMPASS_MINOR_TICK_LENGTH_RATIO
+                    val tickOuter = outerRadius - ringWidth * COMPASS_TICK_OUTER_GAP_RATIO
 
                     val startX = cx + sin(angleRad) * tickInner
                     val startY = cy - cos(angleRad) * tickInner
@@ -258,17 +276,16 @@ object MapComponents {
                         color = onSurfaceColor.copy(alpha = if (isMajor) 0.9f else if (isMid) 0.5f else 0.25f),
                         start = Offset(startX, startY),
                         end = Offset(endX, endY),
-                        strokeWidth = if (isMajor) 2.5f else 1f,
+                        strokeWidth = if (isMajor) COMPASS_MAJOR_TICK_WIDTH else COMPASS_MINOR_TICK_WIDTH,
                         cap = StrokeCap.Round
                     )
                 }
 
-                // Cardinal labels + degree numbers
                 val cardinals = mapOf(
                     0f to "N", 45f to "NE", 90f to "E", 135f to "SE",
                     180f to "S", 225f to "SW", 270f to "W", 315f to "NW"
                 )
-                for (i in 0 until 360 step 30) {
+                for (i in 0 until 360 step COMPASS_MAJOR_TICK_STEP) {
                     val angleRad = Math.toRadians((i - animatedCog).toDouble()).toFloat()
                     val labelRadius = midRadius
                     val lx = cx + sin(angleRad) * labelRadius
@@ -294,11 +311,10 @@ object MapComponents {
                     )
                 }
 
-                // Fixed heading indicator at top (shows where you are heading)
                 val indicatorPath = Path().apply {
-                    moveTo(cx, cy - outerRadius - 4f)
-                    lineTo(cx - 8f, cy - innerRadius + 4f)
-                    lineTo(cx + 8f, cy - innerRadius + 4f)
+                    moveTo(cx, cy - outerRadius - INDICATOR_OFFSET_PX)
+                    lineTo(cx - INDICATOR_HALF_WIDTH_PX, cy - innerRadius + INDICATOR_OFFSET_PX)
+                    lineTo(cx + INDICATOR_HALF_WIDTH_PX, cy - innerRadius + INDICATOR_OFFSET_PX)
                     close()
                 }
                 drawPath(indicatorPath, color = primaryColor)
@@ -307,7 +323,7 @@ object MapComponents {
     }
 
     /**
-     * Creates a triangle Bitmap rotated by the given angle, used as the position marker.
+     * Creates a triangle Bitmap used as the position marker.
      */
     private fun createTriangleBitmap(size: Int, rotation: Float, color: Int): Bitmap {
         val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
@@ -319,7 +335,7 @@ object MapComponents {
         val outlinePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             this.color = AndroidColor.WHITE
             style = Paint.Style.STROKE
-            strokeWidth = 3f
+            strokeWidth = OUTLINE_STROKE_WIDTH
         }
 
         canvas.save()
@@ -327,9 +343,9 @@ object MapComponents {
 
         val cx = size / 2f
         val path = android.graphics.Path().apply {
-            moveTo(cx, size * 0.15f)           // top tip
-            lineTo(size * 0.25f, size * 0.8f)  // bottom-left
-            lineTo(size * 0.75f, size * 0.8f)  // bottom-right
+            moveTo(cx, size * TRIANGLE_TOP_MARGIN_RATIO)
+            lineTo(size * TRIANGLE_SIDE_MARGIN_RATIO, size * TRIANGLE_BOTTOM_MARGIN_RATIO)
+            lineTo(size * (1f - TRIANGLE_SIDE_MARGIN_RATIO), size * TRIANGLE_BOTTOM_MARGIN_RATIO)
             close()
         }
         canvas.drawPath(path, paint)
@@ -353,16 +369,16 @@ object MapComponents {
                 )
                 .padding(PADDING_MEDIUM)
         ) {
-            InfoRow("SOG", "${STAT_FORMAT.format(result.getSog())} ${result.getSpeedUnit()}")
-            HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
-            InfoRow("COG", "${DEGREE_FORMAT.format(result.getCog())}°")
+            InfoRow(stringResource(R.string.label_sog), "${STAT_FORMAT.format(result.getSog())} ${result.getSpeedUnit()}")
+            HorizontalDivider(modifier = Modifier.padding(vertical = DIVIDER_PADDING_VERTICAL))
+            InfoRow(stringResource(R.string.label_cog), "${DEGREE_FORMAT.format(result.getCog())}°")
             if (location != null) {
-                HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
-                InfoRow("Lat", LAT_LON_FORMAT.format(location.latitude))
-                HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
-                InfoRow("Lon", LAT_LON_FORMAT.format(location.longitude))
-                HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
-                InfoRow("Alt", "${STAT_FORMAT.format(result.getAltitude())} ${result.getAltitudeUnit()}")
+                HorizontalDivider(modifier = Modifier.padding(vertical = DIVIDER_PADDING_VERTICAL))
+                InfoRow(stringResource(R.string.label_lat), LAT_LON_FORMAT.format(location.latitude))
+                HorizontalDivider(modifier = Modifier.padding(vertical = DIVIDER_PADDING_VERTICAL))
+                InfoRow(stringResource(R.string.label_lon), LAT_LON_FORMAT.format(location.longitude))
+                HorizontalDivider(modifier = Modifier.padding(vertical = DIVIDER_PADDING_VERTICAL))
+                InfoRow(stringResource(R.string.label_alt), "${STAT_FORMAT.format(result.getAltitude())} ${result.getAltitudeUnit()}")
             }
         }
     }
@@ -388,10 +404,8 @@ object MapComponents {
         }
     }
 
-    // ==================== Existing components (unchanged) ====================
-
     /**
-     * A reusable card component that displays a map inside a clipped container.
+     * A reusable card component that displays a map.
      */
     @Composable
     fun ReusableMapCard(
@@ -435,7 +449,7 @@ object MapComponents {
     }
 
     /**
-     * The core map container using the Osmdroid MapView via AndroidView interop.
+     * Standard map container.
      */
     @SuppressLint("ClickableViewAccessibility")
     @Composable
@@ -446,6 +460,7 @@ object MapComponents {
         isLocked: Boolean = true,
         autoCenter: Boolean = true
     ) {
+        val positionLabel = stringResource(R.string.marker_position)
         AndroidView(
             factory = { ctx ->
                 MapView(ctx).apply {
@@ -466,7 +481,7 @@ object MapComponents {
                     val marker = Marker(mapView)
                     marker.position = geoPoint
                     marker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
-                    marker.title = "Position" 
+                    marker.title = positionLabel
                     mapView.overlays.add(marker)
                     mapView.invalidate()
                 }
@@ -476,8 +491,7 @@ object MapComponents {
     }
 
     /**
-     * Displays a session trace on the map with a polyline connecting GPS points,
-     * start/end markers, and tap-to-select nearest point functionality.
+     * Displays a session trace on the map.
      */
     @SuppressLint("ClickableViewAccessibility")
     @Composable
@@ -488,6 +502,11 @@ object MapComponents {
         onPointTapped: (Int) -> Unit = {}
     ) {
         if (points.isEmpty()) return
+
+        val startLabel = stringResource(R.string.marker_start)
+        val endLabel = stringResource(R.string.marker_end)
+        val pointFormat = stringResource(R.string.marker_point_format)
+        val snippetFormat = stringResource(R.string.marker_snippet_format)
 
         AndroidView(
             factory = { ctx ->
@@ -504,14 +523,14 @@ object MapComponents {
                 val polyline = Polyline().apply {
                     setPoints(geoPoints)
                     outlinePaint.color = AndroidColor.rgb(33, 150, 243)
-                    outlinePaint.strokeWidth = 8f
+                    outlinePaint.strokeWidth = SESSION_TRACE_LINE_WIDTH
                 }
                 mapView.overlays.add(polyline)
 
                 val startMarker = Marker(mapView).apply {
                     position = geoPoints.first()
                     setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
-                    title = "Départ"
+                    title = startLabel
                     icon = mapView.context.getDrawable(org.osmdroid.library.R.drawable.marker_default)
                 }
                 mapView.overlays.add(startMarker)
@@ -520,7 +539,7 @@ object MapComponents {
                     val endMarker = Marker(mapView).apply {
                         position = geoPoints.last()
                         setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
-                        title = "Arrivée"
+                        title = endLabel
                     }
                     mapView.overlays.add(endMarker)
                 }
@@ -530,9 +549,10 @@ object MapComponents {
                     val selectedMarker = Marker(mapView).apply {
                         position = GeoPoint(selectedPoint.latitude, selectedPoint.longitude)
                         setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
-                        title = "Point #${selectedPoint.id}"
-                        snippet = "SOG: %.1f km/h | COG: %.0f°".format(
-                            selectedPoint.sog * 3.6f,
+                        title = pointFormat.format(selectedPoint.id)
+                        snippet = snippetFormat.format(
+                            selectedPoint.sog * Option.Movement.MS_TO_KMH,
+                            "km/h",
                             selectedPoint.cog
                         )
                     }

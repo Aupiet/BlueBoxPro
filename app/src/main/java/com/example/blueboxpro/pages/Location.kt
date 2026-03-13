@@ -1,6 +1,6 @@
 /**
- * This page provides a layout for displaying the compass, live trace, and navigation data,
- * delegating the actual rendering to MapComponents.
+ * This page provides a layout for displaying the navigation dashboard.
+ * It integrates the circular map, compass, and live performance data.
  */
 package com.example.blueboxpro.pages
 
@@ -11,7 +11,15 @@ import com.example.blueboxpro.ui.components.MapComponents
 import org.osmdroid.util.GeoPoint
 
 /**
- * Composable for the second page of the application, focused on navigation view.
+ * The navigation and orientation dashboard (Page 2).
+ * 
+ * Delegates rendering to MapComponents.Page2Layout to maintain consistent styling.
+ * 
+ * @param location Current GPS location.
+ * @param processor Movement processor providing live speed and orientation data.
+ * @param refreshTrigger Trigger to force UI updates when data changes.
+ * @param unitSystem The unit system currently in use.
+ * @param onOpenFullScreenMap Callback to navigate to the full screen map view.
  */
 @SuppressLint("MissingPermission")
 @Composable

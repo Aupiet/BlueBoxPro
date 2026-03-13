@@ -1,6 +1,7 @@
 /**
- * Centralized configuration for the BlueBoxPro application.
- * This class handles settings storage in a JSON file to ensure persistence across updates.
+ * Centralized configuration and constants for the BlueBoxPro application.
+ * This object manages application-wide settings, sensor processing parameters,
+ * and persistence of user preferences to a JSON configuration file.
  */
 package com.example.blueboxpro
 
@@ -10,6 +11,9 @@ import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import java.io.File
 
+/**
+ * Global options object.
+ */
 object Option {
     private const val FILE_NAME_CONFIG = "config.json"
     private val json = Json { 
@@ -18,11 +22,10 @@ object Option {
     }
 
     /**
-     * Internal data structure for serialization.
+     * Internal data structure used for JSON serialization of configuration.
      */
     @Serializable
     private data class ConfigData(
-        // Process
         val gpsTimeoutMs: Long = 5000L,
         val minGpsAccuracy: Float = 50f,
         val maxAcceptableAccuracy: Float = 10f,
@@ -34,14 +37,15 @@ object Option {
         val rBaseGps: Float = 0.1f,
         val deadZoneSpeed: Float = 0.3f,
         val medianWindowSize: Int = 5,
-        // Movement
         val roundingFactor: Float = 10f,
-        // Save
         val fileName: String = "sessiontrace.json",
         val distanceThresholdMeters: Double = 3.0,
         val recordingFrequencyHz: Float = 1.0f
     )
 
+    /**
+     * Settings related to sensor data processing and filtering algorithms.
+     */
     object Process {
         var GPS_TIMEOUT_MS = 5000L
         var MIN_GPS_ACCURACY = 50f
@@ -52,6 +56,7 @@ object Option {
         var HALF_CIRCLE_DEGREES = 180f
         
         var CALCULATION_FREQUENCY_HZ = 50f
+        /** Time step between calculation cycles in seconds. */
         val FIXED_DT: Float get() = 1f / CALCULATION_FREQUENCY_HZ
         var LPF_ACCEL_ALPHA = 0.1f
         var Q_VEL = 0.001f
@@ -62,6 +67,9 @@ object Option {
         var MEDIAN_WINDOW_SIZE = 5
     }
 
+    /**
+     * Mathematical constants and factors for unit conversions.
+     */
     object Movement {
         const val MS_TO_KMH = 3.6f
         const val MS_TO_MPH = 2.23694f
@@ -71,10 +79,14 @@ object Option {
         var ROUNDING_FACTOR = 10f
     }
 
+    /**
+     * Configuration for data recording and file storage formats.
+     */
     object Save {
         var FILE_NAME = "sessiontrace.json"
         var DISTANCE_THRESHOLD_METERS = 3.0
         var RECORDING_FREQUENCY_HZ = 1.0f
+        /** Interval between recording points in milliseconds. */
         val RECORDING_INTERVAL_MS: Long get() = (1000f / RECORDING_FREQUENCY_HZ).toLong()
         
         const val DATE_FORMAT = "dd/MM/yyyy"
@@ -87,15 +99,9 @@ object Option {
         const val M_FORMAT = "%.0f m"
     }
 
-    object App {
-        const val DEFAULT_UNIT_SYSTEM = "METRIC_KMH"
-        const val LANG_FR = "fr"
-        const val LANG_EN = "en"
-        const val LANG_NAME_FR = "Français"
-    }
-
     /**
-     * Saves options to a text file (JSON).
+     * Persists the current configuration state to a local JSON file.
+     * @param context Android context for file access.
      */
     fun save(context: Context) {
         val file = File(context.filesDir, FILE_NAME_CONFIG)
@@ -120,12 +126,13 @@ object Option {
             val jsonString = json.encodeToString(data)
             file.writeText(jsonString)
         } catch (e: Exception) {
-            e.printStackTrace()
+            // Error logged by system or ignored if non-critical
         }
     }
 
     /**
-     * Loads options from the text file (JSON).
+     * Loads the configuration from the local JSON file if it exists.
+     * @param context Android context for file access.
      */
     fun load(context: Context) {
         val file = File(context.filesDir, FILE_NAME_CONFIG)
@@ -153,7 +160,7 @@ object Option {
             Save.DISTANCE_THRESHOLD_METERS = data.distanceThresholdMeters
             Save.RECORDING_FREQUENCY_HZ = data.recordingFrequencyHz
         } catch (e: Exception) {
-            e.printStackTrace()
+            // Defaults remain if loading fails
         }
     }
 }

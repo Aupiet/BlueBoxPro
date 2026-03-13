@@ -1,12 +1,12 @@
 /**
  * This page manages session recordings and displays the history of saved sessions.
+ * It provides UI for starting/stopping recordings and viewing/sharing past sessions.
  */
 package com.example.blueboxpro.pages
 
 import android.content.res.Configuration
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -29,7 +29,14 @@ import com.example.blueboxpro.Save.Session
 import com.example.blueboxpro.Process.MovementProcessor
 
 /**
- * Composable for the recording page of the application, focused on session management.
+ * The recording and history dashboard (Page 3).
+ * 
+ * Allows users to start or stop a tracking session.
+ * Displays a list of previously recorded sessions with export capabilities.
+ * 
+ * @param processor The movement processor providing live data for recording.
+ * @param refreshTrigger Trigger to notify the page that new data is available.
+ * @param onSessionClick Callback when a historical session is selected for detail view.
  */
 @Composable
 fun Page3(
@@ -48,6 +55,7 @@ fun Page3(
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
 
+    // Handle data point accumulation during recording
     LaunchedEffect(refreshTrigger) {
         if (isRecording) {
             currentRecording?.addPoint(
@@ -61,7 +69,6 @@ fun Page3(
     }
 
     if (isLandscape) {
-        // Landscape Layout: Controls on the left, History on the right
         Row(
             modifier = Modifier
                 .fillMaxSize()
@@ -109,7 +116,6 @@ fun Page3(
             }
         }
     } else {
-        // Portrait Layout: Vertical stack
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -146,6 +152,14 @@ fun Page3(
     }
 }
 
+/**
+ * Card containing the recording start/stop button and status.
+ * 
+ * @param isRecording True if a session is currently being recorded.
+ * @param currentRecording The active recording object, if any.
+ * @param sessionCount Total number of existing sessions (used for default naming).
+ * @param context Android context for file operations.
+ */
 @Composable
 private fun RecordingControlCard(
     isRecording: Boolean,
@@ -164,26 +178,20 @@ private fun RecordingControlCard(
             modifier = Modifier.padding(PADDING_MEDIUM),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.SpaceBetween
-
         ) {
             Text(
-                text = if (isRecording) "Enregistrement en cours..." else stringResource(R.string.new_session),
+                text = if (isRecording) stringResource(R.string.recording_title) else stringResource(R.string.new_session),
                 style = MaterialTheme.typography.titleMedium
             )
             
             if (isRecording) {
                 Text(
-                    text = "Points capturés : ${currentRecording?.points?.size ?: 0}",
+                    text = "Points: ${currentRecording?.points?.size ?: 0}",
                     style = MaterialTheme.typography.bodySmall
                 )
             }
 
-            if (isRecording) {
-                Spacer(modifier = Modifier.height(85.dp))
-            }
-            else {
-                Spacer(modifier = Modifier.height(100.dp))
-            }
+            Spacer(modifier = Modifier.height(if (isRecording) 85.dp else 100.dp))
             
             Button(
                 onClick = {
@@ -193,8 +201,7 @@ private fun RecordingControlCard(
                         SessionManager.stopRecording(context)
                     }
                 },
-                modifier = Modifier
-                    .fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth(),
                 colors = if (isRecording) ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error) else ButtonDefaults.buttonColors()
             ) {
                 Icon(
@@ -210,6 +217,12 @@ private fun RecordingControlCard(
     }
 }
 
+/**
+ * Lists past sessions with details and sharing options.
+ * 
+ * @param sessions List of completed sessions.
+ * @param onSessionClick Callback when a session is tapped.
+ */
 @Composable
 private fun HistorySection(
     sessions: List<Session>,
@@ -236,7 +249,7 @@ private fun HistorySection(
                 modifier = Modifier.clickable { onSessionClick(session.id) },
                 headlineContent = { Text("${session.name} - ${session.date}") },
                 supportingContent = { 
-                    Text("${stringResource(R.string.duration_label)} ${session.duration} | ${stringResource(R.string.distance_label)} ${session.distance} | Vitesse moyenne : ${session.averageSpeed}") 
+                    Text("${stringResource(R.string.duration_label)} ${session.duration} | ${stringResource(R.string.distance_label)} ${session.distance}") 
                 },
                 trailingContent = {
                     IconButton(
@@ -257,6 +270,6 @@ private fun HistorySection(
 
 private val PADDING_MEDIUM = 16.dp
 private val SPACING_SMALL = 8.dp
-private val SPACING_MEDIUM = 16.dp
 private val SPACING_LARGE = 24.dp
 private val EMPTY_STATE_VERTICAL_PADDING = 40.dp
+private val SPACING_MEDIUM = 16.dp

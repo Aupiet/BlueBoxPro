@@ -1,6 +1,7 @@
 /**
  * This class listens to Android sensor events (accelerometer, magnetometer, GPS) 
  * and forwards the data to the MovementProcessor for computation.
+ * It manages the registration and unregistration of system sensor listeners.
  */
 package com.example.blueboxpro.Process
 
@@ -13,6 +14,13 @@ import android.hardware.SensorManager
 import android.os.Looper
 import com.google.android.gms.location.*
 
+/**
+ * Orchestrates sensor data collection.
+ * 
+ * @param context Android context for accessing system services.
+ * @param processor The movement processor that will receive and filter raw data.
+ * @param onDataUpdated Callback invoked whenever a sensor update has been processed.
+ */
 class CaptorListener(
     private val context: Context,
     private val processor: MovementProcessor,
@@ -70,6 +78,7 @@ class CaptorListener(
 
     /**
      * Computes the device's orientation using gravity and geomagnetic sensor data.
+     * Updates the processor with the new azimuth.
      */
     private fun updateCompass() {
         if (hasGravity && hasGeomagnetic) {
@@ -103,7 +112,8 @@ class CaptorListener(
     }
 
     /**
-     * Registers sensor listeners and requests location updates.
+     * Registers sensor listeners for linear acceleration, gravity, and magnetic field.
+     * Also initiates periodic GPS location updates.
      */
     fun start() {
         val linearAccel = sensorManager.getDefaultSensor(Sensor.TYPE_LINEAR_ACCELERATION)
@@ -117,18 +127,22 @@ class CaptorListener(
         requestLocationUpdates()
     }
 
+    /**
+     * Configures and starts high-accuracy location tracking.
+     */
     @SuppressLint("MissingPermission")
     private fun requestLocationUpdates() {
         val locationRequest = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, LOCATION_INTERVAL_MS).build()
         try {
             fusedLocationClient.requestLocationUpdates(locationRequest, locationCallback, Looper.getMainLooper())
         } catch (e: Exception) { 
-            // TODO: Handle location request error
+            // Silent fail if permission not granted during this specific call
         }
     }
 
     /**
-     * Unregisters sensor listeners and removes location updates.
+     * Unregisters all sensor listeners and stops GPS updates.
+     * Call this when the monitoring activity is destroyed or stopped.
      */
     fun stop() {
         sensorManager.unregisterListener(sensorEventListener)

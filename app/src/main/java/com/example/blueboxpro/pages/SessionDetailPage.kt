@@ -1,6 +1,7 @@
 /**
- * This page displays detailed information about a specific recorded session,
- * including a map trace, speed statistics, interactive charts, and point-level details.
+ * This page displays detailed information about a specific recorded session.
+ * It includes a map trace, speed statistics, interactive charts for SOG and COG,
+ * and point-level details when a marker is tapped.
  */
 package com.example.blueboxpro.pages
 
@@ -40,7 +41,10 @@ import java.util.Date
 import java.util.Locale
 
 /**
- * Composable for the session detail screen.
+ * Detailed view for a specific session.
+ * 
+ * @param session The session object to display.
+ * @param onBack Callback to return to the previous screen.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -52,6 +56,7 @@ fun SessionDetailPage(
     var showDeleteDialog by remember { mutableStateOf(false) }
     var selectedPointIndex by remember { mutableIntStateOf(-1) }
 
+    // Logic for deleting a session with confirmation
     if (showDeleteDialog && session != null) {
         AlertDialog(
             onDismissRequest = { showDeleteDialog = false },
@@ -83,7 +88,10 @@ fun SessionDetailPage(
                 title = { Text(session?.name ?: stringResource(R.string.session_details_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Retour")
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack, 
+                            contentDescription = stringResource(R.string.content_desc_back)
+                        )
                     }
                 },
                 actions = {
@@ -91,7 +99,7 @@ fun SessionDetailPage(
                         IconButton(onClick = { showDeleteDialog = true }) {
                             Icon(
                                 imageVector = Icons.Default.Delete,
-                                contentDescription = "Supprimer",
+                                contentDescription = stringResource(R.string.content_desc_delete),
                                 tint = MaterialTheme.colorScheme.error
                             )
                         }
@@ -121,19 +129,16 @@ fun SessionDetailPage(
                 .padding(horizontal = PADDING_MEDIUM),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // --- Session Info Header ---
             SessionInfoHeader(session)
 
             Spacer(modifier = Modifier.height(SPACING_MEDIUM))
 
-            // --- Speed Statistics ---
             if (points.isNotEmpty()) {
                 SpeedStatisticsCard(points)
 
                 Spacer(modifier = Modifier.height(SPACING_MEDIUM))
 
-                // --- Map with Trace ---
-                SectionHeader("Tracé GPS")
+                SectionHeader(stringResource(R.string.header_gps_trace))
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -148,7 +153,6 @@ fun SessionDetailPage(
                     )
                 }
 
-                // --- Selected Point Info ---
                 if (selectedPointIndex in points.indices) {
                     Spacer(modifier = Modifier.height(SPACING_SMALL))
                     SelectedPointCard(points[selectedPointIndex])
@@ -156,21 +160,19 @@ fun SessionDetailPage(
 
                 Spacer(modifier = Modifier.height(SPACING_MEDIUM))
 
-                // --- SOG Chart ---
-                SectionHeader("Vitesse (SOG)")
+                SectionHeader(stringResource(R.string.header_speed_chart))
                 SpeedChart(points)
 
                 Spacer(modifier = Modifier.height(SPACING_MEDIUM))
 
-                // --- COG Chart ---
-                SectionHeader("Cap (COG)")
+                SectionHeader(stringResource(R.string.header_heading_chart))
                 CogChart(points)
 
                 Spacer(modifier = Modifier.height(SPACING_LARGE))
             } else {
                 Spacer(modifier = Modifier.height(SPACING_LARGE))
                 Text(
-                    text = "Aucun point GPS enregistré pour cette session.",
+                    text = stringResource(R.string.no_points_recorded),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -179,6 +181,9 @@ fun SessionDetailPage(
     }
 }
 
+/**
+ * Top summary card for the session.
+ */
 @Composable
 private fun SessionInfoHeader(session: Session) {
     Card(
@@ -188,12 +193,12 @@ private fun SessionInfoHeader(session: Session) {
         Column(modifier = Modifier.padding(PADDING_MEDIUM)) {
             Text(text = session.name, style = MaterialTheme.typography.headlineSmall)
             Spacer(modifier = Modifier.height(SPACING_SMALL))
-            Text(text = "Date : ${session.date}", style = MaterialTheme.typography.bodyMedium)
-            Text(text = "Durée : ${session.duration}", style = MaterialTheme.typography.bodyMedium)
-            Text(text = "Distance : ${session.distance}", style = MaterialTheme.typography.bodyMedium)
-            Text(text = "Vitesse moy. : ${session.averageSpeed}", style = MaterialTheme.typography.bodyMedium)
+            Text(text = "${stringResource(R.string.label_date)} ${session.date}", style = MaterialTheme.typography.bodyMedium)
+            Text(text = "${stringResource(R.string.duration_label)} ${session.duration}", style = MaterialTheme.typography.bodyMedium)
+            Text(text = "${stringResource(R.string.distance_label)} ${session.distance}", style = MaterialTheme.typography.bodyMedium)
+            Text(text = "${stringResource(R.string.label_avg_speed)} ${session.averageSpeed}", style = MaterialTheme.typography.bodyMedium)
             Text(
-                text = "${session.points.size} points GPS",
+                text = stringResource(R.string.label_points_count, session.points.size),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -201,6 +206,9 @@ private fun SessionInfoHeader(session: Session) {
     }
 }
 
+/**
+ * Card displaying aggregated speed stats.
+ */
 @Composable
 private fun SpeedStatisticsCard(points: List<GpsPoint>) {
     val sogValues = points.map { it.sog * Option.Movement.MS_TO_KMH }
@@ -218,13 +226,16 @@ private fun SpeedStatisticsCard(points: List<GpsPoint>) {
                 .padding(PADDING_MEDIUM),
             horizontalArrangement = Arrangement.SpaceEvenly
         ) {
-            StatColumn("Min", STAT_FORMAT.format(minSpeed), "km/h")
-            StatColumn("Moy", STAT_FORMAT.format(avgSpeed), "km/h")
-            StatColumn("Max", STAT_FORMAT.format(maxSpeed), "km/h")
+            StatColumn(stringResource(R.string.stat_min), STAT_FORMAT.format(minSpeed), "km/h")
+            StatColumn(stringResource(R.string.stat_avg), STAT_FORMAT.format(avgSpeed), "km/h")
+            StatColumn(stringResource(R.string.stat_max), STAT_FORMAT.format(maxSpeed), "km/h")
         }
     }
 }
 
+/**
+ * Individual stat display unit.
+ */
 @Composable
 private fun StatColumn(label: String, value: String, unit: String) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -247,9 +258,12 @@ private fun StatColumn(label: String, value: String, unit: String) {
     }
 }
 
+/**
+ * Detail card for a selected GPS point from the map or charts.
+ */
 @Composable
 private fun SelectedPointCard(point: GpsPoint) {
-    val timeStr = SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(Date(point.timestamp))
+    val timeStr = SimpleDateFormat("HH:mm:ss", Locale.US).format(Date(point.timestamp))
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -257,7 +271,7 @@ private fun SelectedPointCard(point: GpsPoint) {
     ) {
         Column(modifier = Modifier.padding(PADDING_SMALL)) {
             Text(
-                text = "Point #${point.id} — $timeStr",
+                text = stringResource(R.string.point_detail_header, point.id, timeStr),
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onTertiaryContainer
@@ -287,6 +301,9 @@ private fun SelectedPointCard(point: GpsPoint) {
     }
 }
 
+/**
+ * Standard section header for the details page.
+ */
 @Composable
 private fun SectionHeader(title: String) {
     Text(
@@ -301,7 +318,7 @@ private fun SectionHeader(title: String) {
 }
 
 /**
- * SOG line chart using Vico library.
+ * Line chart visualizing Speed Over Ground (SOG) over time.
  */
 @Composable
 private fun SpeedChart(points: List<GpsPoint>) {
@@ -331,7 +348,7 @@ private fun SpeedChart(points: List<GpsPoint>) {
 }
 
 /**
- * COG line chart using Vico library.
+ * Line chart visualizing Course Over Ground (COG) over time.
  */
 @Composable
 private fun CogChart(points: List<GpsPoint>) {

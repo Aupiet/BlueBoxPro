@@ -1,6 +1,7 @@
 /**
- * Main activity of the application. Sets up navigation, handles permissions,
- * and initializes sensor listeners.
+ * Main entry point of the BlueBoxPro application.
+ * This activity handles the high-level navigation (Scaffold, TopAppBar, BottomBar),
+ * permissions, and initializes core components like the MovementProcessor and CaptorListener.
  */
 package com.example.blueboxpro
 
@@ -27,6 +28,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.core.os.LocaleListCompat
 import androidx.core.view.WindowCompat
@@ -45,6 +47,10 @@ import org.osmdroid.config.Configuration
 import org.osmdroid.util.GeoPoint
 import java.util.Locale
 
+/**
+ * The primary Activity for the application.
+ * Responsible for setting up the UI theme, navigation graph, and lifecycle-bound sensor processing.
+ */
 class MainActivity : AppCompatActivity() {
     companion object {
         private const val ROUTE_MAIN = "main"
@@ -64,14 +70,16 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         
+        // Load osmdroid configuration
         Configuration.getInstance().load(
             applicationContext,
             androidx.preference.PreferenceManager.getDefaultSharedPreferences(applicationContext)
         )
 
+        // Load saved sessions from local storage
         SessionManager.loadSessions(this)
 
-        // Activation du mode bord à bord pour une interface moderne
+        // Enable edge-to-edge display
         enableEdgeToEdge()
         WindowCompat.setDecorFitsSystemWindows(window, false)
 
@@ -88,6 +96,7 @@ class MainActivity : AppCompatActivity() {
             var lastLocationState by remember { mutableStateOf<GeoPoint?>(null) }
             var refreshTrigger by remember { mutableStateOf(0) }
 
+            // Initialize sensor listener
             val captorListener = remember {
                 CaptorListener(context, processor) {
                     lastLocationState = processor.lastLocation
@@ -95,10 +104,12 @@ class MainActivity : AppCompatActivity() {
                 }
             }
 
+            // Sync recording with processor updates
             LaunchedEffect(refreshTrigger) {
                 SessionManager.updateRecording(processor)
             }
 
+            // Manage sensor listener lifecycle
             DisposableEffect(Unit) {
                 captorListener.start()
                 onDispose {
@@ -107,9 +118,10 @@ class MainActivity : AppCompatActivity() {
                 }
             }
 
+            // Permission handling
             val permissionLauncher = rememberLauncherForActivityResult(
                 contract = ActivityResultContracts.RequestMultiplePermissions()
-            ) { /* TODO: Handle permission results */ }
+            ) { /* Permission results could be handled here */ }
 
             LaunchedEffect(Unit) {
                 permissionLauncher.launch(
@@ -189,7 +201,20 @@ class MainActivity : AppCompatActivity() {
 }
 
 /**
- * The main screen containing the bottom navigation and horizontal pager.
+ * The main screen containing the bottom navigation and horizontal pager for top-level pages.
+ * 
+ * @param processor The shared MovementProcessor instance.
+ * @param lastLocationState The last known GPS location.
+ * @param refreshTrigger A counter used to trigger UI updates.
+ * @param unitSystem The current unit system key (metric, imperial, etc.).
+ * @param language The current display language name.
+ * @param isDarkMode Whether dark theme is enabled.
+ * @param onDarkModeChange Callback for dark mode toggle.
+ * @param onUnitSystemChange Callback for unit system selection.
+ * @param onLanguageChange Callback for language selection.
+ * @param onOpenFullScreenMap Callback to navigate to the full screen map.
+ * @param onNavigateToAdvancedSettings Callback to navigate to advanced settings.
+ * @param onNavigateToSessionDetail Callback to navigate to a specific session's details.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -211,25 +236,17 @@ fun MainScreen(
     val scope = rememberCoroutineScope()
     
     val tabs = listOf(
-        TabItem(Icons.Default.Home),
-        TabItem(Icons.Default.LocationOn),
-        TabItem(Icons.Default.PlayArrow),
-        TabItem(Icons.Default.Settings)
+        TabItem(Icons.Default.Home, R.string.tab_home),
+        TabItem(Icons.Default.LocationOn, R.string.tab_map),
+        TabItem(Icons.Default.PlayArrow, R.string.tab_sessions),
+        TabItem(Icons.Default.Settings, R.string.tab_settings)
     )
-
-    // Noms des rubriques pour la toolbar et la navigation
-    val titles = if (language == "Français") {
-        listOf("Accueil", "Carte", "Sessions", "Paramètres")
-    } else {
-        listOf("Home", "Map", "Sessions", "Settings")
-    }
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         topBar = {
-            // Ajout de la toolbar avec le nom de la rubrique actuelle
             TopAppBar(
-                title = { Text(titles[pagerState.currentPage]) },
+                title = { Text(stringResource(tabs[pagerState.currentPage].labelRes)) },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.surface,
                     titleContentColor = MaterialTheme.colorScheme.onSurface,
@@ -237,7 +254,6 @@ fun MainScreen(
             )
         },
         bottomBar = {
-            // NavigationBar gère automatiquement les insets pour ne pas chevaucher la barre système
             NavigationBar {
                 tabs.forEachIndexed { index, tab ->
                     NavigationBarItem(
@@ -248,11 +264,11 @@ fun MainScreen(
                         icon = { 
                             Icon(
                                 imageVector = tab.icon, 
-                                contentDescription = titles[index],
+                                contentDescription = stringResource(tab.labelRes),
                                 modifier = Modifier.size(28.dp)
                             ) 
                         },
-                        label = { Text(titles[index]) },
+                        label = { Text(stringResource(tab.labelRes)) },
                         alwaysShowLabel = true
                     )
                 }
@@ -301,6 +317,9 @@ fun MainScreen(
 }
 
 /**
- * Data class representing a tab item in the navigation bar.
+ * Data class representing an item in the bottom navigation bar.
+ * 
+ * @param icon The ImageVector icon for the tab.
+ * @param labelRes The string resource ID for the tab's label.
  */
-data class TabItem(val icon: ImageVector)
+data class TabItem(val icon: ImageVector, val labelRes: Int)

@@ -1,9 +1,7 @@
 /**
- * This class processes motion data from sensors (accelerometer, GPS, compass)
- * to estimate speed and orientation using an Extended Kalman Filter (EKF) and Low Pass Filtering.
- * 
- * Acceleration is projected from the device body frame to the world frame (North/East)
- * and then onto the current heading direction to obtain a signed forward acceleration.
+ * Core engine for processing motion data from various sensors (Accelerometer, GPS, Compass).
+ * It uses an Extended Kalman Filter (EKF) to fuse inertial data with GPS updates for
+ * high-precision speed estimation, and applies low-pass filtering for orientation smoothing.
  */
 package com.example.blueboxpro.Process
 
@@ -12,22 +10,31 @@ import org.osmdroid.util.GeoPoint
 import kotlin.math.cos
 import kotlin.math.round
 import kotlin.math.sin
-import kotlin.math.sqrt
 
+/**
+ * Handles the calculation and filtering of movement parameters like Speed Over Ground (SOG),
+ * Course Over Ground (COG), and device orientation (Azimuth).
+ */
 class MovementProcessor {
 
-    private val ekfEstimator = EkfSpeedEstimator(qVel = Option.Process.Q_VEL, qBias = Option.Process.Q_BIAS)
+    private val ekfEstimator = EkfSpeedEstimator(
+        qVel = Option.Process.Q_VEL, 
+        qBias = Option.Process.Q_BIAS
+    )
     private var lastFilteredAccel = 0f
     
+    // Raw acceleration values (body frame)
     var accelX: Float = 0f
     var accelY: Float = 0f
     var accelZ: Float = 0f
 
+    // Intermediate speed estimations
     var speedIMU: Float = 0f
     var speedGPS: Float = 0f
-    private val speeds = FloatArray(Option.Process.SPEED_HISTORY_SIZE)
-    var moyspeed: Float = 0f
+    private val speedHistory = FloatArray(Option.Process.SPEED_HISTORY_SIZE)
+    var averageSpeed: Float = 0f
 
+    // Positional data
     var altitude: Double = 0.0
     var lastLocation: GeoPoint? = null
     var gpsAccuracy: Float = 0f
@@ -35,21 +42,26 @@ class MovementProcessor {
     private var lastGpsUpdateMillis: Long = 0L
     private var timeAccumulator = 0f
 
+    // Final navigation outputs
     var sog: Float = 0f
     var cog: Float = 0f
     
     var azimuth: Float = 0f
-    var moyaz: Float = 0f
+    private var averageAzimuth: Float = 0f
 
     /**
-     * Converts current movement state into a MovementResult.
+     * Captures the current state of movement into a immutable MovementResult object.
+     * Use this to get a snapshot of data formatted for a specific unit system.
+     * 
+     * @param unitSystemStr The key identifying the desired unit system (e.g., "METRIC_KMH").
+     * @return A MovementResult containing converted values.
      */
     fun getResult(unitSystemStr: String): MovementResult {
         val unitSystem = when {
             unitSystemStr.contains("km/h") -> UnitSystem.METRIC_KMH
             unitSystemStr.contains("m/s") -> UnitSystem.METRIC_MS
-            unitSystemStr.contains("Impérial") -> UnitSystem.IMPERIAL
-            unitSystemStr.contains("Nautique") -> UnitSystem.NAUTICAL
+            unitSystemStr.contains("Imperial") || unitSystemStr.contains("Impérial") -> UnitSystem.IMPERIAL
+            unitSystemStr.contains("Nautical") || unitSystemStr.contains("Nautique") -> UnitSystem.NAUTICAL
             else -> UnitSystem.METRIC_KMH
         }
         return MovementResult(
@@ -60,7 +72,7 @@ class MovementProcessor {
             speedIMU = speedIMU,
             speedGPS = speedGPS,
             speedFused = ekfEstimator.velocity,
-            moyspeed = moyspeed,
+            averageSpeed = averageSpeed,
             sog = sog,
             cog = cog,
             azimuth = azimuth,
@@ -70,36 +82,35 @@ class MovementProcessor {
     }
 
     /**
-     * Projects body-frame acceleration into the world frame using the rotation matrix,
-     * then extracts the forward component along the current heading.
-     * Falls back to magnitude-based estimation if no rotation matrix is available.
-     *
-     * @param rotMatrix 3x3 rotation matrix (row-major) from SensorManager, or null
-     * @return Signed forward acceleration in m/s² (positive = accelerating, negative = braking)
+     * Projects body-frame acceleration into the world frame using a rotation matrix.
+     * 
+     * @param ax Raw X acceleration.
+     * @param ay Raw Y acceleration.
+     * @param az Raw Z acceleration.
+     * @param rotMatrix 3x3 rotation matrix (row-major).
+     * @return Forward acceleration in m/s².
      */
     private fun computeForwardAcceleration(
         ax: Float, ay: Float, az: Float, rotMatrix: FloatArray?
     ): Float {
         if (rotMatrix == null) {
-            // Fallback: use Y-axis as rough forward proxy (phone in portrait, held upright)
-            return ay
+            return ay // Fallback
         }
-        // Transform body-frame acceleration to world frame (North, East, Down)
-        // world = R * body  where R is the 3x3 rotation matrix
         val worldNorth = rotMatrix[0] * ax + rotMatrix[1] * ay + rotMatrix[2] * az
         val worldEast  = rotMatrix[3] * ax + rotMatrix[4] * ay + rotMatrix[5] * az
 
-        // Project horizontal world acceleration onto the current heading direction
-        val headingRad = Math.toRadians(moyaz.toDouble()).toFloat()
+        val headingRad = Math.toRadians(averageAzimuth.toDouble()).toFloat()
         return worldNorth * cos(headingRad) + worldEast * sin(headingRad)
     }
 
     /**
-     * Processes acceleration at ~50Hz using the EKF estimator.
-     * The acceleration is projected into the world frame and along the heading
-     * to provide a signed forward acceleration to the EKF.
-     *
-     * @param rotMatrix Optional rotation matrix from CaptorListener for body→world transform
+     * Processes a new acceleration sample. Usually called at high frequency (~50Hz).
+     * 
+     * @param ax Raw X acceleration (m/s²).
+     * @param ay Raw Y acceleration (m/s²).
+     * @param az Raw Z acceleration (m/s²).
+     * @param dt Time since last sample in seconds.
+     * @param rotMatrix Optional rotation matrix for frame transformation.
      */
     fun processAcceleration(ax: Float, ay: Float, az: Float, dt: Float, rotMatrix: FloatArray? = null) {
         checkGpsTimeout()
@@ -108,15 +119,12 @@ class MovementProcessor {
         accelY = ay
         accelZ = az
 
-        // Project acceleration into the forward direction (signed)
         val rawForward = computeForwardAcceleration(ax, ay, az, rotMatrix)
 
-        // Low-pass filter to smooth high-frequency noise
         val filteredAccel = Option.Process.LPF_ACCEL_ALPHA * rawForward +
                 (1f - Option.Process.LPF_ACCEL_ALPHA) * lastFilteredAccel
         lastFilteredAccel = filteredAccel
 
-        // Fixed time-step integration for numerical stability
         timeAccumulator += dt
         while (timeAccumulator >= Option.Process.FIXED_DT) {
             ekfEstimator.predict(filteredAccel, Option.Process.FIXED_DT)
@@ -124,29 +132,31 @@ class MovementProcessor {
         }
         
         speedIMU = ekfEstimator.velocity
-        updateSpeedAverage(ekfEstimator.velocity)
+        updateSpeedStatistics(ekfEstimator.velocity)
     }
 
     /**
-     * Updates the speed history and computes median-filtered SOG.
-     * Uses median filtering to reject outlier speed values.
+     * Updates rolling averages and median filtering for speed.
+     * 
+     * @param currentSpeed The latest estimated velocity.
      */
-    private fun updateSpeedAverage(currentSpeed: Float) {
-        // Apply dead zone: speeds below threshold are considered zero
+    private fun updateSpeedStatistics(currentSpeed: Float) {
         val cleanSpeed = if (currentSpeed < Option.Process.DEAD_ZONE_SPEED) 0f else currentSpeed
 
-        for (i in 0 until speeds.size - 1) {
-            speeds[i] = speeds[i + 1]
+        for (i in 0 until speedHistory.size - 1) {
+            speedHistory[i] = speedHistory[i + 1]
         }
-        speeds[speeds.size - 1] = cleanSpeed
-        moyspeed = speeds.average().toFloat()
+        speedHistory[speedHistory.size - 1] = cleanSpeed
+        averageSpeed = speedHistory.average().toFloat()
 
-        // Median filter over a recent window for SOG display stability
-        val windowSize = Option.Process.MEDIAN_WINDOW_SIZE.coerceAtMost(speeds.size)
-        val recentSpeeds = speeds.takeLast(windowSize).sorted()
+        val windowSize = Option.Process.MEDIAN_WINDOW_SIZE.coerceAtMost(speedHistory.size)
+        val recentSpeeds = speedHistory.takeLast(windowSize).sorted()
         sog = recentSpeeds[recentSpeeds.size / 2]
     }
 
+    /**
+     * Resets GPS-dependent values if signal is lost for too long.
+     */
     private fun checkGpsTimeout() {
         if (lastGpsUpdateMillis != 0L && System.currentTimeMillis() - lastGpsUpdateMillis > Option.Process.GPS_TIMEOUT_MS) {
             speedGPS = 0f
@@ -155,7 +165,15 @@ class MovementProcessor {
     }
 
     /**
-     * Updates EKF state using GPS data as the reference.
+     * Integrates new GPS data into the EKF and updates navigation state.
+     * 
+     * @param lat Latitude.
+     * @param lon Longitude.
+     * @param alt Altitude.
+     * @param gpsS Speed from GPS (m/s).
+     * @param gpsBearing Bearing from GPS (degrees).
+     * @param accuracy Horizontal accuracy (m).
+     * @param onUpdate Callback to notify UI of changes.
      */
     fun updateWithGPS(lat: Double, lon: Double, alt: Double, gpsS: Float, gpsBearing: Float, accuracy: Float, onUpdate: () -> Unit) {
         if (accuracy > Option.Process.MIN_GPS_ACCURACY) {
@@ -177,26 +195,32 @@ class MovementProcessor {
         val rGps = Option.Process.R_BASE_GPS * (accuracy / Option.Process.MAX_ACCEPTABLE_ACCURACY).coerceAtLeast(1f)
         ekfEstimator.update(gpsS, rGps)
         
-        updateSpeedAverage(ekfEstimator.velocity)
-        onUpdate()
-    }
-
-    fun updateOrientation(newaz: Float, onUpdate: () -> Unit) {
-        var diffaz: Float = newaz - moyaz
-
-        while (diffaz < -Option.Process.HALF_CIRCLE_DEGREES) diffaz += Option.Process.FULL_CIRCLE_DEGREES
-        while (diffaz > Option.Process.HALF_CIRCLE_DEGREES) diffaz -= Option.Process.FULL_CIRCLE_DEGREES
-
-        moyaz = (moyaz + Option.Process.AZIMUTH_ALPHA * diffaz)
-
-        if (moyaz < 0) moyaz += Option.Process.FULL_CIRCLE_DEGREES
-        if (moyaz >= Option.Process.FULL_CIRCLE_DEGREES) moyaz -= Option.Process.FULL_CIRCLE_DEGREES
-        azimuth = round(moyaz)
+        updateSpeedStatistics(ekfEstimator.velocity)
         onUpdate()
     }
 
     /**
-     * Resets all internal states, including the EKF estimator.
+     * Updates the smoothed azimuth using the latest compass reading.
+     * 
+     * @param newAzimuth Latest raw azimuth in degrees.
+     * @param onUpdate Callback to notify UI.
+     */
+    fun updateOrientation(newAzimuth: Float, onUpdate: () -> Unit) {
+        var diffAzimuth: Float = newAzimuth - averageAzimuth
+
+        while (diffAzimuth < -Option.Process.HALF_CIRCLE_DEGREES) diffAzimuth += Option.Process.FULL_CIRCLE_DEGREES
+        while (diffAzimuth > Option.Process.HALF_CIRCLE_DEGREES) diffAzimuth -= Option.Process.FULL_CIRCLE_DEGREES
+
+        averageAzimuth = (averageAzimuth + Option.Process.AZIMUTH_ALPHA * diffAzimuth)
+
+        if (averageAzimuth < 0) averageAzimuth += Option.Process.FULL_CIRCLE_DEGREES
+        if (averageAzimuth >= Option.Process.FULL_CIRCLE_DEGREES) averageAzimuth -= Option.Process.FULL_CIRCLE_DEGREES
+        azimuth = round(averageAzimuth)
+        onUpdate()
+    }
+
+    /**
+     * Resets all internal buffers and filters to their initial state.
      */
     fun reset() {
         ekfEstimator.reset()
@@ -210,7 +234,7 @@ class MovementProcessor {
         sog = 0f
         cog = 0f
         azimuth = 0f
-        moyspeed = 0f
+        averageSpeed = 0f
         altitude = 0.0
         gpsAccuracy = 0f
         lastGpsUpdateMillis = 0L

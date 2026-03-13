@@ -1,22 +1,32 @@
 /**
  * This file contains Kalman filter implementations used for sensor fusion and smoothing.
- * It includes a 1D SimpleKalmanFilter and an EkfSpeedEstimator for velocity and bias tracking.
+ * It includes a 1D SimpleKalmanFilter for general smoothing and an EkfSpeedEstimator 
+ * specialized for velocity and accelerometer bias tracking.
  */
 package com.example.blueboxpro.Process
 
 import kotlin.math.abs
 
 /**
- * A basic 1D Kalman Filter used for smoothing sensor data.
+ * A basic 1D Kalman Filter used for smoothing one-dimensional sensor data.
+ * 
+ * @param q Process noise (prediction uncertainty).
+ * @param r Measurement noise (sensor uncertainty).
+ * @param p Error covariance (initial estimate uncertainty).
+ * @param x Initial estimated value.
  */
 class SimpleKalmanFilter(
-    var q: Float = 0.1f, // Process noise
-    var r: Float = 0.5f, // Measurement noise
-    var p: Float = 1.0f, // Error covariance
-    var x: Float = 0.0f  // Estimated value
+    var q: Float = 0.1f,
+    var r: Float = 0.5f,
+    var p: Float = 1.0f,
+    var x: Float = 0.0f
 ) {
     /**
      * Prediction step: updates the estimate based on acceleration and time delta.
+     * Use this when you have a known input (acceleration) affecting the state.
+     * 
+     * @param acceleration The input acceleration in m/s².
+     * @param dt Time interval since last update.
      */
     fun predict(acceleration: Float, dt: Float) {
         x += acceleration * dt
@@ -24,7 +34,9 @@ class SimpleKalmanFilter(
     }
 
     /**
-     * Update step: corrects the estimate using a new measurement.
+     * Update step: corrects the current estimate using a new sensor measurement.
+     * 
+     * @param measurement The new raw sensor value.
      */
     fun update(measurement: Float) {
         val k = p / (p + r)
@@ -34,42 +46,52 @@ class SimpleKalmanFilter(
 }
 
 /**
- * Extended Kalman Filter specialized for estimating velocity and accelerometer bias.
- * State vector: [velocity, bias]
+ * Extended Kalman Filter (EKF) specialized for estimating velocity and accelerometer bias.
  * 
- * Refactored for better numerical stability and sensor glitch protection.
+ * Tracks a state vector consisting of [velocity, bias].
+ * The bias term allows the filter to learn and compensate for accelerometer offsets over time.
+ * 
+ * @param qVel Process noise for the velocity state.
+ * @param qBias Process noise for the bias state.
+ * @param gateThreshold Maximum allowed innovation (m/s) to reject GPS outliers.
  */
 class EkfSpeedEstimator(
     private val qVel: Float = 0.001f,
     private val qBias: Float = 0.0001f,
-    private val gateThreshold: Float = 5.0f // Innovation Gating Threshold (m/s)
+    private val gateThreshold: Float = 5.0f
 ) {
-    // State: [velocity (m/s), bias (m/s²)]
+    /** Current estimated velocity in m/s. */
     var velocity = 0f
         private set
+        
+    /** Current estimated accelerometer bias in m/s². */
     var bias = 0f
         private set
 
-    // Covariance matrix P (Diagonal entries must remain positive)
+    // Covariance matrix P elements
     private var pVv = 1f
     private var pVb = 0f
     private var pBv = 0f
     private var pBb = 1f
 
-    // ZUPT (Zero Velocity Update) logic variables
+    // Zero Velocity Update (ZUPT) tracking
     private var stillTimeCounter = 0f
-    private val ZUPT_ACCEL_THRESHOLD = 0.08f // m/s² (low = only true stillness triggers ZUPT)
-    private val ZUPT_TIME_REQUIRED = 0.8f    // seconds of stillness before forcing zero
+    
+    companion object {
+        private const val ZUPT_ACCEL_THRESHOLD = 0.08f
+        private const val ZUPT_TIME_REQUIRED = 0.8f
+        private const val MIN_COVARIANCE = 1e-6f
+        private const val ZUPT_COVARIANCE = 1e-4f
+    }
 
     /**
-     * Prediction Step: updates state and covariance based on measured acceleration and time delta.
-     * Formula: v_k+1 = v_k + (a_mes - bias) * dt
+     * Predicts the next state using measured acceleration.
      * 
-     * @param aMes Raw acceleration (Linear Acceleration preferred)
-     * @param dt Precision time delta in seconds
+     * @param aMes Raw acceleration measured in the forward direction (m/s²).
+     * @param dt Time step since the last prediction (seconds).
      */
     fun predict(aMes: Float, dt: Float) {
-        // 1. ZUPT check: If acceleration is negligible, track time to force zero velocity
+        // Apply ZUPT if the device is stationary
         if (abs(aMes) < ZUPT_ACCEL_THRESHOLD) {
             stillTimeCounter += dt
             if (stillTimeCounter > ZUPT_TIME_REQUIRED) {
@@ -80,75 +102,62 @@ class EkfSpeedEstimator(
             stillTimeCounter = 0f
         }
 
-        // 2. State transition (Euler Integration)
-        // v = v + (a - bias) * dt
+        // State update: v = v + (a - bias) * dt
         velocity += (aMes - bias) * dt
         
-        // 3. Covariance extrapolation: P = FPF' + Q
-        // Jacobian F = [1, -dt; 0, 1]
-        val dt2 = dt * dt
+        // Covariance update: P = FPF' + Q
         val pVvNew = pVv - dt * pBv - dt * (pVb - dt * pBb) + qVel
         val pVbNew = pVb - dt * pBb
         val pBvNew = pBv - dt * pBb
         val pBbNew = pBb + qBias
 
-        // Numerical stability: Ensure diagonal P entries remain positive
-        pVv = kotlin.math.max(1e-6f, pVvNew)
+        pVv = kotlin.math.max(MIN_COVARIANCE, pVvNew)
         pVb = pVbNew
         pBv = pBvNew
-        pBb = kotlin.math.max(1e-6f, pBbNew)
+        pBb = kotlin.math.max(MIN_COVARIANCE, pBbNew)
         
-        // Clamp to zero for display purposes (filter dynamics already applied)
         velocity = velocity.coerceAtLeast(0f)
     }
 
     /**
-     * Update Step: corrects state and covariance using a reference velocity (GPS).
-     * Includes Innovation Gating to protect against GPS glitches.
+     * Updates the internal state using an external velocity reference (e.g., GPS).
+     * 
+     * @param refVelocity The reference velocity in m/s.
+     * @param rMeasurement The measurement noise covariance of the reference source.
      */
     fun update(refVelocity: Float, rMeasurement: Float) {
-        // 1. Innovation (Difference between GPS and prediction)
         val y = refVelocity - velocity
 
-        // 2. Innovation Gating: Reject GPS measurements that are physically impossible
-        // If the gap is > 5m/s (18km/h) in a single update, we ignore it as a glitch.
+        // Innovation gating: ignore GPS glitches
         if (abs(y) > gateThreshold) {
             return 
         }
         
-        // 3. Innovation Covariance S = HPH' + R where H = [1, 0]
         val s = pVv + rMeasurement
-        
-        // 4. Kalman Gain K = PH' / S
         val kV = pVv / s
         val kB = pBv / s
         
-        // 5. Update State
         velocity += kV * y
         bias += kB * y
         
-        // 6. Update Covariance P = (I - KH)P
         val pVvOld = pVv
         val pVbOld = pVb
-        pVv = kotlin.math.max(1e-6f, (1f - kV) * pVvOld)
+        pVv = kotlin.math.max(MIN_COVARIANCE, (1f - kV) * pVvOld)
         pVb = (1f - kV) * pVbOld
         pBv = -kB * pVvOld + pBv
-        pBb = kotlin.math.max(1e-6f, -kB * pVbOld + pBb)
+        pBb = kotlin.math.max(MIN_COVARIANCE, -kB * pVbOld + pBb)
     }
 
     /**
-     * Forces the velocity to zero and resets the bias tracker.
-     * Prevents drift when the device is known to be stationary.
+     * Internal: Forces velocity to zero when stationarity is detected.
      */
     private fun applyZupt() {
         velocity = 0f
-        // Reduce covariance as we are certain of the state
-        pVv = 1e-4f 
-        // We don't reset bias completely to keep the learned offset
+        pVv = ZUPT_COVARIANCE
     }
 
     /**
-     * Resets the filter to initial values.
+     * Resets the filter state and covariance to initial conditions.
      */
     fun reset() {
         velocity = 0f

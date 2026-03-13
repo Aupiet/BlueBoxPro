@@ -1,6 +1,7 @@
 /**
  * This page allows the user to configure general application settings,
  * such as theme, unit system, and language.
+ * Changes are propagated back to the MainActivity via callbacks.
  */
 package com.example.blueboxpro.pages
 
@@ -19,7 +20,17 @@ import androidx.compose.ui.unit.dp
 import com.example.blueboxpro.R
 
 /**
- * Composable for the settings screen.
+ * The settings screen (Page 4).
+ * 
+ * Provides UI controls for global app preferences.
+ * 
+ * @param isDarkMode Whether the dark theme is currently enabled.
+ * @param onDarkModeChange Callback to toggle dark mode.
+ * @param unitSystem The current unit system display string.
+ * @param onUnitSystemChange Callback when a new unit system is selected.
+ * @param language The current language key.
+ * @param onLanguageChange Callback when a new language is selected.
+ * @param onNavigateToAdvancedSettings Callback to open the advanced settings screen.
  */
 @Composable
 fun SettingsPage(
@@ -44,6 +55,7 @@ fun SettingsPage(
             modifier = Modifier.padding(bottom = SPACING_LARGE)
         )
 
+        // Dark Mode Toggle
         ListItem(
             headlineContent = { Text(stringResource(R.string.dark_mode)) },
             trailingContent = {
@@ -56,6 +68,7 @@ fun SettingsPage(
         
         HorizontalDivider()
 
+        // Unit System Selection
         Text(
             text = stringResource(R.string.unit_system_title),
             style = MaterialTheme.typography.titleMedium,
@@ -98,6 +111,7 @@ fun SettingsPage(
 
         HorizontalDivider(modifier = Modifier.padding(vertical = SPACING_SMALL))
 
+        // Language Selection
         Text(
             text = stringResource(R.string.language_title),
             style = MaterialTheme.typography.titleMedium,
@@ -138,6 +152,7 @@ fun SettingsPage(
 
         Spacer(modifier = Modifier.height(SPACING_XLARGE))
 
+        // Advanced Settings Navigation
         Button(
             onClick = onNavigateToAdvancedSettings,
             modifier = Modifier.fillMaxWidth()
