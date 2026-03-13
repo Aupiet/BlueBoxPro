@@ -5,6 +5,7 @@ package com.example.blueboxpro.ui.components
 
 import android.annotation.SuppressLint
 import android.content.res.Configuration
+import android.graphics.Color as AndroidColor
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -24,10 +25,13 @@ import androidx.compose.ui.viewinterop.AndroidView
 import com.example.blueboxpro.Process.MovementProcessor
 import com.example.blueboxpro.Process.MovementResult
 import com.example.blueboxpro.R
+import com.example.blueboxpro.Save.GpsPoint
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
+import org.osmdroid.util.BoundingBox
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.Marker
+import org.osmdroid.views.overlay.Polyline
 
 object MapComponents {
     private const val MAP_CORNER_RADIUS_DP = 16
@@ -37,6 +41,8 @@ object MapComponents {
     private const val PAGE2_INFO_WEIGHT = 2f
     private const val PAGE2_MAP_WEIGHT = 1f
     private const val MAP_WIDTH_FRACTION = 0.9f
+    private const val SESSION_MAP_ZOOM = 16.0
+    private const val BOUNDING_BOX_PADDING = 50
 
     /**
      * Specialized layout for Page 2, displaying GPS coordinates and a mini-map.
@@ -54,7 +60,6 @@ object MapComponents {
         val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
         
         if (isLandscape) {
-            // Landscape Layout: Data on the left, Map on the right
             Row(
                 modifier = Modifier.fillMaxSize().padding(PADDING_MEDIUM),
                 verticalAlignment = Alignment.CenterVertically
@@ -82,7 +87,6 @@ object MapComponents {
                 }
             }
         } else {
-            // Portrait Layout: Vertical (Data top, Map bottom)
             Column(
                 modifier = Modifier.fillMaxSize(),
                 horizontalAlignment = Alignment.CenterHorizontally
@@ -222,6 +226,118 @@ object MapComponents {
                     mapView.overlays.add(marker)
                     mapView.invalidate()
                 }
+            },
+            modifier = modifier
+        )
+    }
+
+    /**
+     * Displays a session trace on the map with a polyline connecting GPS points,
+     * start/end markers, and tap-to-select nearest point functionality.
+     *
+     * @param points List of GPS points from the recorded session
+     * @param onPointTapped Callback when a point on the map is tapped, returns the nearest GpsPoint index
+     */
+    @SuppressLint("ClickableViewAccessibility")
+    @Composable
+    fun SessionMapContainer(
+        points: List<GpsPoint>,
+        modifier: Modifier = Modifier,
+        selectedPointIndex: Int = -1,
+        onPointTapped: (Int) -> Unit = {}
+    ) {
+        if (points.isEmpty()) return
+
+        AndroidView(
+            factory = { ctx ->
+                MapView(ctx).apply {
+                    setTileSource(TileSourceFactory.MAPNIK)
+                    setMultiTouchControls(true)
+                    controller.setZoom(SESSION_MAP_ZOOM)
+                }
+            },
+            update = { mapView ->
+                mapView.overlays.clear()
+
+                // Draw polyline connecting all points
+                val geoPoints = points.map { GeoPoint(it.latitude, it.longitude) }
+                val polyline = Polyline().apply {
+                    setPoints(geoPoints)
+                    outlinePaint.color = AndroidColor.rgb(33, 150, 243)
+                    outlinePaint.strokeWidth = 8f
+                }
+                mapView.overlays.add(polyline)
+
+                // Start marker (green)
+                val startMarker = Marker(mapView).apply {
+                    position = geoPoints.first()
+                    setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
+                    title = "Départ"
+                    icon = mapView.context.getDrawable(org.osmdroid.library.R.drawable.marker_default)
+                }
+                mapView.overlays.add(startMarker)
+
+                // End marker (red)
+                if (geoPoints.size > 1) {
+                    val endMarker = Marker(mapView).apply {
+                        position = geoPoints.last()
+                        setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
+                        title = "Arrivée"
+                    }
+                    mapView.overlays.add(endMarker)
+                }
+
+                // Selected point marker
+                if (selectedPointIndex in points.indices) {
+                    val selectedPoint = points[selectedPointIndex]
+                    val selectedMarker = Marker(mapView).apply {
+                        position = GeoPoint(selectedPoint.latitude, selectedPoint.longitude)
+                        setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
+                        title = "Point #${selectedPoint.id}"
+                        snippet = "SOG: %.1f km/h | COG: %.0f°".format(
+                            selectedPoint.sog * 3.6f,
+                            selectedPoint.cog
+                        )
+                    }
+                    mapView.overlays.add(selectedMarker)
+                    selectedMarker.showInfoWindow()
+                }
+
+                // Fit map to show the full trace
+                if (geoPoints.size >= 2) {
+                    try {
+                        val boundingBox = BoundingBox.fromGeoPoints(geoPoints)
+                        mapView.post {
+                            mapView.zoomToBoundingBox(boundingBox, true, BOUNDING_BOX_PADDING)
+                        }
+                    } catch (_: Exception) {
+                        mapView.controller.setCenter(geoPoints.first())
+                    }
+                } else {
+                    mapView.controller.setCenter(geoPoints.first())
+                }
+
+                // Tap listener: find nearest point
+                mapView.setOnTouchListener { _, event ->
+                    if (event.action == android.view.MotionEvent.ACTION_UP) {
+                        val projection = mapView.projection
+                        val tappedGeo = projection.fromPixels(event.x.toInt(), event.y.toInt()) as GeoPoint
+                        
+                        var minDist = Double.MAX_VALUE
+                        var nearestIdx = 0
+                        for (i in points.indices) {
+                            val dist = tappedGeo.distanceToAsDouble(GeoPoint(points[i].latitude, points[i].longitude))
+                            if (dist < minDist) {
+                                minDist = dist
+                                nearestIdx = i
+                            }
+                        }
+                        onPointTapped(nearestIdx)
+                    }
+                    false
+                }
+
+                mapView.invalidate()
             },
             modifier = modifier
         )
