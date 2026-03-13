@@ -30,8 +30,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.core.os.LocaleListCompat
 import androidx.core.view.WindowCompat
-import androidx.core.view.WindowInsetsCompat
-import androidx.core.view.WindowInsetsControllerCompat
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -73,12 +71,10 @@ class MainActivity : AppCompatActivity() {
 
         SessionManager.loadSessions(this)
 
-        WindowCompat.setDecorFitsSystemWindows(window, false)
-        val controller = WindowCompat.getInsetsController(window, window.decorView)
-        controller?.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
-        controller?.hide(WindowInsetsCompat.Type.navigationBars())
-
+        // Activation du mode bord à bord pour une interface moderne
         enableEdgeToEdge()
+        WindowCompat.setDecorFitsSystemWindows(window, false)
+
         setContent {
             val context = LocalContext.current
             
@@ -175,7 +171,6 @@ class MainActivity : AppCompatActivity() {
                             session = session,
                             onBack = { rootNavController.popBackStack() }
                         )
-
                     }
                 }
             }
@@ -196,6 +191,7 @@ class MainActivity : AppCompatActivity() {
 /**
  * The main screen containing the bottom navigation and horizontal pager.
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainScreen(
     processor: MovementProcessor,
@@ -221,9 +217,27 @@ fun MainScreen(
         TabItem(Icons.Default.Settings)
     )
 
+    // Noms des rubriques pour la toolbar et la navigation
+    val titles = if (language == "Français") {
+        listOf("Accueil", "Carte", "Sessions", "Paramètres")
+    } else {
+        listOf("Home", "Map", "Sessions", "Settings")
+    }
+
     Scaffold(
         modifier = Modifier.fillMaxSize(),
+        topBar = {
+            // Ajout de la toolbar avec le nom de la rubrique actuelle
+            TopAppBar(
+                title = { Text(titles[pagerState.currentPage]) },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    titleContentColor = MaterialTheme.colorScheme.onSurface,
+                )
+            )
+        },
         bottomBar = {
+            // NavigationBar gère automatiquement les insets pour ne pas chevaucher la barre système
             NavigationBar {
                 tabs.forEachIndexed { index, tab ->
                     NavigationBarItem(
@@ -234,11 +248,12 @@ fun MainScreen(
                         icon = { 
                             Icon(
                                 imageVector = tab.icon, 
-                                contentDescription = null,
-                                modifier = Modifier.size(32.dp)
+                                contentDescription = titles[index],
+                                modifier = Modifier.size(28.dp)
                             ) 
                         },
-                        alwaysShowLabel = false
+                        label = { Text(titles[index]) },
+                        alwaysShowLabel = true
                     )
                 }
             }
@@ -262,8 +277,8 @@ fun MainScreen(
                 1 -> Page2(
                     location = lastLocationState,
                     processor = processor,
+                    refreshTrigger = refreshTrigger,
                     unitSystem = unitSystem,
-                    onBack = { scope.launch { pagerState.animateScrollToPage(0) } },
                     onOpenFullScreenMap = onOpenFullScreenMap
                 )
                 2 -> Page3(

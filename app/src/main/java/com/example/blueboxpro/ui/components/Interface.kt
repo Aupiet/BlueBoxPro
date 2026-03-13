@@ -4,47 +4,70 @@
 package com.example.blueboxpro.ui.components
 
 import android.annotation.SuppressLint
-import android.content.res.Configuration
+import android.graphics.Bitmap
+import android.graphics.Canvas as AndroidCanvas
 import android.graphics.Color as AndroidColor
+import android.graphics.Paint
+import android.graphics.drawable.BitmapDrawable
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.drawText
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import com.example.blueboxpro.Process.MovementProcessor
 import com.example.blueboxpro.Process.MovementResult
-import com.example.blueboxpro.R
 import com.example.blueboxpro.Save.GpsPoint
+import com.example.blueboxpro.Save.SessionManager
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.BoundingBox
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.Marker
 import org.osmdroid.views.overlay.Polyline
+import kotlin.math.cos
+import kotlin.math.min
+import kotlin.math.sin
 
 object MapComponents {
     private const val MAP_CORNER_RADIUS_DP = 16
     private const val DEFAULT_ZOOM_LEVEL = 17.0
-    private const val LAT_LON_FORMAT = "%.6f"
-    private const val STAT_FORMAT = "%.1f"
-    private const val PAGE2_INFO_WEIGHT = 2f
-    private const val PAGE2_MAP_WEIGHT = 1f
-    private const val MAP_WIDTH_FRACTION = 0.9f
     private const val SESSION_MAP_ZOOM = 16.0
     private const val BOUNDING_BOX_PADDING = 50
+    private const val MAP_WIDTH_FRACTION = 0.9f
+    private const val LAT_LON_FORMAT = "%.6f"
+    private const val STAT_FORMAT = "%.1f"
+    private const val DEGREE_FORMAT = "%.0f"
+
+    // Compass constants
+    private const val COMPASS_RING_WIDTH_RATIO = 0.12f
+    private const val COMPASS_ANIM_DURATION_MS = 300
 
     /**
-     * Specialized layout for Page 2, displaying GPS coordinates and a mini-map.
+     * Page 2 layout: circular map with compass ring overlay,
+     * triangle position marker, live trace, and info panel below.
      */
     @Composable
     fun Page2Layout(
@@ -55,89 +78,317 @@ object MapComponents {
         onMapClick: () -> Unit
     ) {
         val result = processor.getResult(unitSystem)
-        val configuration = LocalConfiguration.current
-        val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
-        
-        if (isLandscape) {
-            Row(
-                modifier = Modifier.fillMaxSize().padding(PADDING_MEDIUM),
-                verticalAlignment = Alignment.CenterVertically
+        val activeRecording = SessionManager.activeRecording
+        val recordingPoints = activeRecording?.points ?: emptyList()
+
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(PADDING_MEDIUM),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            // --- Circular Map + Compass ---
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .aspectRatio(1f),
+                contentAlignment = Alignment.Center
             ) {
-                Column(
-                    modifier = Modifier.weight(1f),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center
-                ) {
-                    LocationInfo(location, result)
-                }
-                
-                Box(
-                    modifier = Modifier.weight(1f),
-                    contentAlignment = Alignment.Center
-                ) {
-                    ReusableMapCard(
-                        location = location,
-                        widthFraction = 1f,
-                        heightFraction = 0.9f,
-                        isLocked = true,
-                        autoCenter = true, 
-                        onClick = onMapClick
-                    )
-                }
+                CircularMapWithCompass(
+                    location = location,
+                    cog = result.getCog(),
+                    azimuth = result.getAzimuth(),
+                    recordingPoints = recordingPoints,
+                    onMapClick = onMapClick
+                )
             }
-        } else {
-            Column(
-                modifier = Modifier.fillMaxSize(),
-                horizontalAlignment = Alignment.CenterHorizontally
+
+            Spacer(modifier = Modifier.height(SPACING_MEDIUM))
+
+            // --- Navigation Info Panel ---
+            NavigationInfoPanel(location, result)
+        }
+    }
+
+    /**
+     * Circular clipped map with a compass rose overlaid around its edge.
+     * Position is shown as a triangle oriented toward COG.
+     */
+    @SuppressLint("ClickableViewAccessibility")
+    @Composable
+    private fun CircularMapWithCompass(
+        location: GeoPoint?,
+        cog: Float,
+        azimuth: Float,
+        recordingPoints: List<GpsPoint>,
+        onMapClick: () -> Unit
+    ) {
+        // Smooth animation for compass rotation
+        val animatedAzimuth by animateFloatAsState(
+            targetValue = azimuth,
+            animationSpec = tween(durationMillis = COMPASS_ANIM_DURATION_MS),
+            label = "azimuth"
+        )
+        val animatedCog by animateFloatAsState(
+            targetValue = cog,
+            animationSpec = tween(durationMillis = COMPASS_ANIM_DURATION_MS),
+            label = "cog"
+        )
+
+        val primaryColor = MaterialTheme.colorScheme.primary
+        val onSurfaceColor = MaterialTheme.colorScheme.onSurface
+        val surfaceColor = MaterialTheme.colorScheme.surface
+        val errorColor = MaterialTheme.colorScheme.error
+        val textMeasurer = rememberTextMeasurer()
+
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+            // 1) Circular clipped osmdroid map
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .clip(CircleShape)
             ) {
-                Column(
+                AndroidView(
+                    factory = { ctx ->
+                        MapView(ctx).apply {
+                            setTileSource(TileSourceFactory.MAPNIK)
+                            setMultiTouchControls(false)
+                            setOnTouchListener { _, _ -> true }
+                            controller.setZoom(DEFAULT_ZOOM_LEVEL)
+                            location?.let { controller.setCenter(it) }
+                        }
+                    },
+                    update = { mapView ->
+                        // Heading-up: rotate the map so direction of travel is always up
+                        mapView.mapOrientation = -animatedCog
+                        mapView.overlays.clear()
+
+                        // Live trace polyline
+                        if (recordingPoints.isNotEmpty()) {
+                            val tracePoints = recordingPoints.map { GeoPoint(it.latitude, it.longitude) }
+                            val polyline = Polyline().apply {
+                                setPoints(tracePoints)
+                                outlinePaint.color = AndroidColor.rgb(33, 150, 243)
+                                outlinePaint.strokeWidth = 6f
+                            }
+                            mapView.overlays.add(polyline)
+                        }
+
+                        // Position marker (triangle always pointing up)
+                        location?.let { geoPoint ->
+                            mapView.controller.animateTo(geoPoint)
+
+                            val triangleBitmap = createTriangleBitmap(
+                                size = 60,
+                                rotation = 0f,
+                                color = primaryColor.toArgb()
+                            )
+                            val marker = Marker(mapView).apply {
+                                position = geoPoint
+                                setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
+                                icon = BitmapDrawable(mapView.context.resources, triangleBitmap)
+                                setInfoWindow(null)
+                            }
+                            mapView.overlays.add(marker)
+                        }
+
+                        mapView.invalidate()
+                    },
+                    modifier = Modifier.fillMaxSize()
+                )
+                // Transparent overlay to handle click (map consumes touch events)
+                Box(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .weight(PAGE2_INFO_WEIGHT)
-                        .padding(PADDING_MEDIUM),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center
-                ) {
-                    LocationInfo(location, result)
+                        .fillMaxSize()
+                        .background(Color.Transparent)
+                        .clickable { onMapClick() }
+                )
+            }
+
+            // 2) Compass ring overlay (drawn on Canvas on top of the map)
+            Canvas(modifier = Modifier.fillMaxSize()) {
+                val cx = size.width / 2
+                val cy = size.height / 2
+                val outerRadius = min(cx, cy)
+                val ringWidth = outerRadius * COMPASS_RING_WIDTH_RATIO
+                val midRadius = outerRadius - ringWidth / 2
+                val innerRadius = outerRadius - ringWidth
+
+                // Semi-transparent ring background
+                drawCircle(
+                    color = surfaceColor.copy(alpha = 0.75f),
+                    radius = outerRadius,
+                    center = Offset(cx, cy),
+                    style = Stroke(width = ringWidth)
+                )
+
+                // Outer and inner ring borders
+                drawCircle(
+                    color = onSurfaceColor.copy(alpha = 0.3f),
+                    radius = outerRadius,
+                    center = Offset(cx, cy),
+                    style = Stroke(width = 1.5f)
+                )
+                drawCircle(
+                    color = onSurfaceColor.copy(alpha = 0.3f),
+                    radius = innerRadius,
+                    center = Offset(cx, cy),
+                    style = Stroke(width = 1.5f)
+                )
+
+                // Tick marks (rotate with COG so heading direction is always up)
+                for (i in 0 until 360 step 5) {
+                    val angleRad = Math.toRadians((i - animatedCog).toDouble()).toFloat()
+                    val isMajor = i % 30 == 0
+                    val isMid = i % 10 == 0
+                    val tickInner = if (isMajor) innerRadius + ringWidth * 0.15f
+                                    else if (isMid) innerRadius + ringWidth * 0.3f
+                                    else innerRadius + ringWidth * 0.45f
+                    val tickOuter = outerRadius - ringWidth * 0.05f
+
+                    val startX = cx + sin(angleRad) * tickInner
+                    val startY = cy - cos(angleRad) * tickInner
+                    val endX = cx + sin(angleRad) * tickOuter
+                    val endY = cy - cos(angleRad) * tickOuter
+
+                    drawLine(
+                        color = onSurfaceColor.copy(alpha = if (isMajor) 0.9f else if (isMid) 0.5f else 0.25f),
+                        start = Offset(startX, startY),
+                        end = Offset(endX, endY),
+                        strokeWidth = if (isMajor) 2.5f else 1f,
+                        cap = StrokeCap.Round
+                    )
                 }
 
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .weight(PAGE2_MAP_WEIGHT)
-                        .padding(bottom = PADDING_MEDIUM),
-                    contentAlignment = Alignment.Center
-                ) {
-                    ReusableMapCard(
-                        location = location,
-                        widthFraction = MAP_WIDTH_FRACTION,
-                        heightFraction = 1f,
-                        isLocked = true,
-                        autoCenter = true, 
-                        onClick = onMapClick
+                // Cardinal labels + degree numbers
+                val cardinals = mapOf(
+                    0f to "N", 45f to "NE", 90f to "E", 135f to "SE",
+                    180f to "S", 225f to "SW", 270f to "W", 315f to "NW"
+                )
+                for (i in 0 until 360 step 30) {
+                    val angleRad = Math.toRadians((i - animatedCog).toDouble()).toFloat()
+                    val labelRadius = midRadius
+                    val lx = cx + sin(angleRad) * labelRadius
+                    val ly = cy - cos(angleRad) * labelRadius
+
+                    val cardinalLabel = cardinals[i.toFloat()]
+                    val displayText = cardinalLabel ?: "${i}°"
+
+                    val isN = cardinalLabel == "N"
+                    val isCardinal = cardinalLabel != null && cardinalLabel.length == 1
+                    val style = TextStyle(
+                        fontWeight = if (isCardinal) FontWeight.ExtraBold else FontWeight.Medium,
+                        fontSize = if (isCardinal) 14.sp else if (cardinalLabel != null) 10.sp else 9.sp,
+                        color = if (isN) errorColor else onSurfaceColor
+                    )
+                    val measured = textMeasurer.measure(displayText, style)
+                    drawText(
+                        textLayoutResult = measured,
+                        topLeft = Offset(
+                            lx - measured.size.width / 2f,
+                            ly - measured.size.height / 2f
+                        )
                     )
                 }
+
+                // Fixed heading indicator at top (shows where you are heading)
+                val indicatorPath = Path().apply {
+                    moveTo(cx, cy - outerRadius - 4f)
+                    lineTo(cx - 8f, cy - innerRadius + 4f)
+                    lineTo(cx + 8f, cy - innerRadius + 4f)
+                    close()
+                }
+                drawPath(indicatorPath, color = primaryColor)
+            }
+        }
+    }
+
+    /**
+     * Creates a triangle Bitmap rotated by the given angle, used as the position marker.
+     */
+    private fun createTriangleBitmap(size: Int, rotation: Float, color: Int): Bitmap {
+        val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
+        val canvas = AndroidCanvas(bitmap)
+        val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            this.color = color
+            style = Paint.Style.FILL
+        }
+        val outlinePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            this.color = AndroidColor.WHITE
+            style = Paint.Style.STROKE
+            strokeWidth = 3f
+        }
+
+        canvas.save()
+        canvas.rotate(rotation, size / 2f, size / 2f)
+
+        val cx = size / 2f
+        val path = android.graphics.Path().apply {
+            moveTo(cx, size * 0.15f)           // top tip
+            lineTo(size * 0.25f, size * 0.8f)  // bottom-left
+            lineTo(size * 0.75f, size * 0.8f)  // bottom-right
+            close()
+        }
+        canvas.drawPath(path, paint)
+        canvas.drawPath(path, outlinePaint)
+        canvas.restore()
+
+        return bitmap
+    }
+
+    /**
+     * Info panel showing SOG, COG, coordinates, altitude.
+     */
+    @Composable
+    private fun NavigationInfoPanel(location: GeoPoint?, result: MovementResult) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(
+                    MaterialTheme.colorScheme.surfaceVariant,
+                    RoundedCornerShape(MAP_CORNER_RADIUS_DP.dp)
+                )
+                .padding(PADDING_MEDIUM)
+        ) {
+            InfoRow("SOG", "${STAT_FORMAT.format(result.getSog())} ${result.getSpeedUnit()}")
+            HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+            InfoRow("COG", "${DEGREE_FORMAT.format(result.getCog())}°")
+            if (location != null) {
+                HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+                InfoRow("Lat", LAT_LON_FORMAT.format(location.latitude))
+                HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+                InfoRow("Lon", LAT_LON_FORMAT.format(location.longitude))
+                HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+                InfoRow("Alt", "${STAT_FORMAT.format(result.getAltitude())} ${result.getAltitudeUnit()}")
             }
         }
     }
 
     @Composable
-    private fun LocationInfo(location: GeoPoint?, result: MovementResult) {
-        if (location != null) {
-            Text(text = "Latitude : ${LAT_LON_FORMAT.format(location.latitude)}", style = MaterialTheme.typography.bodyLarge)
-            Text(text = "Longitude : ${LAT_LON_FORMAT.format(location.longitude)}", style = MaterialTheme.typography.bodyLarge)
+    private fun InfoRow(label: String, value: String) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
             Text(
-                text = "${stringResource(R.string.altitude_label)} ${STAT_FORMAT.format(result.getAltitude())} ${result.getAltitudeUnit()}", 
-                style = MaterialTheme.typography.bodyLarge
+                text = label,
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Text(
-                text = "${stringResource(R.string.accuracy_label)} ${STAT_FORMAT.format(result.getAccuracy())} ${result.getAccuracyUnit()}", 
-                style = MaterialTheme.typography.bodyLarge
+                text = value,
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface
             )
-        } else {
-            Text(text = stringResource(R.string.gps_not_available), style = MaterialTheme.typography.bodyLarge)
         }
     }
+
+    // ==================== Existing components (unchanged) ====================
 
     /**
      * A reusable card component that displays a map inside a clipped container.
@@ -227,9 +478,6 @@ object MapComponents {
     /**
      * Displays a session trace on the map with a polyline connecting GPS points,
      * start/end markers, and tap-to-select nearest point functionality.
-     *
-     * @param points List of GPS points from the recorded session
-     * @param onPointTapped Callback when a point on the map is tapped, returns the nearest GpsPoint index
      */
     @SuppressLint("ClickableViewAccessibility")
     @Composable
@@ -252,7 +500,6 @@ object MapComponents {
             update = { mapView ->
                 mapView.overlays.clear()
 
-                // Draw polyline connecting all points
                 val geoPoints = points.map { GeoPoint(it.latitude, it.longitude) }
                 val polyline = Polyline().apply {
                     setPoints(geoPoints)
@@ -261,7 +508,6 @@ object MapComponents {
                 }
                 mapView.overlays.add(polyline)
 
-                // Start marker (green)
                 val startMarker = Marker(mapView).apply {
                     position = geoPoints.first()
                     setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
@@ -270,7 +516,6 @@ object MapComponents {
                 }
                 mapView.overlays.add(startMarker)
 
-                // End marker (red)
                 if (geoPoints.size > 1) {
                     val endMarker = Marker(mapView).apply {
                         position = geoPoints.last()
@@ -280,7 +525,6 @@ object MapComponents {
                     mapView.overlays.add(endMarker)
                 }
 
-                // Selected point marker
                 if (selectedPointIndex in points.indices) {
                     val selectedPoint = points[selectedPointIndex]
                     val selectedMarker = Marker(mapView).apply {
@@ -296,7 +540,6 @@ object MapComponents {
                     selectedMarker.showInfoWindow()
                 }
 
-                // Fit map to show the full trace
                 if (geoPoints.size >= 2) {
                     try {
                         val boundingBox = BoundingBox.fromGeoPoints(geoPoints)
@@ -310,7 +553,6 @@ object MapComponents {
                     mapView.controller.setCenter(geoPoints.first())
                 }
 
-                // Tap listener: find nearest point
                 mapView.setOnTouchListener { _, event ->
                     if (event.action == android.view.MotionEvent.ACTION_UP) {
                         val projection = mapView.projection
@@ -337,5 +579,5 @@ object MapComponents {
     }
 
     private val PADDING_MEDIUM = 16.dp
-    private val SPACING_LARGE = 24.dp
+    private val SPACING_MEDIUM = 12.dp
 }
