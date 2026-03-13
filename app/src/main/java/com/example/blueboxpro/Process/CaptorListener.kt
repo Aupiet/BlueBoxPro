@@ -34,6 +34,8 @@ class CaptorListener(
     private val geomagneticData = FloatArray(3)
     private var hasGravity = false
     private var hasGeomagnetic = false
+    private val rotationMatrix = FloatArray(ROTATION_MATRIX_SIZE)
+    private var hasRotationMatrix = false
 
     private val sensorEventListener = object : SensorEventListener {
         override fun onSensorChanged(event: SensorEvent?) {
@@ -46,7 +48,8 @@ class CaptorListener(
                         event.values[0],
                         event.values[1],
                         event.values[2],
-                        dt
+                        dt,
+                        if (hasRotationMatrix) rotationMatrix.copyOf() else null
                     )
                     onDataUpdated()
                 }
@@ -70,11 +73,11 @@ class CaptorListener(
      */
     private fun updateCompass() {
         if (hasGravity && hasGeomagnetic) {
-            val r = FloatArray(ROTATION_MATRIX_SIZE)
             val i = FloatArray(ROTATION_MATRIX_SIZE)
-            if (SensorManager.getRotationMatrix(r, i, gravityData, geomagneticData)) {
+            if (SensorManager.getRotationMatrix(rotationMatrix, i, gravityData, geomagneticData)) {
+                hasRotationMatrix = true
                 val orientation = FloatArray(ORIENTATION_ARRAY_SIZE)
-                SensorManager.getOrientation(r, orientation)
+                SensorManager.getOrientation(rotationMatrix, orientation)
                 
                 var azimuthDeg = Math.toDegrees(orientation[0].toDouble()).toFloat()
                 if (azimuthDeg < 0) azimuthDeg += FULL_CIRCLE_DEGREES

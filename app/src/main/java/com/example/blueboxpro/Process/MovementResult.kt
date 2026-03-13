@@ -4,6 +4,7 @@
  */
 package com.example.blueboxpro.Process
 
+import com.example.blueboxpro.Option
 import kotlin.math.round
 
 enum class UnitSystem {
@@ -29,17 +30,8 @@ class MovementResult(
     private val altitude: Double, // mètres
     private val accuracy: Float   // mètres
 ) {
-    companion object {
-        private const val MS_TO_KMH = 3.6f
-        private const val MS_TO_MPH = 2.23694f
-        private const val MS_TO_KNOTS = 1.94384f
-        private const val METERS_TO_FEET = 3.28084
-        private const val METERS_TO_FEET_FLOAT = 3.28084f
-        private const val ROUNDING_FACTOR = 10f
-    }
-
     /** Rounds a float value to one decimal place. */
-    private fun Float.roundToOneDecimal(): Float = round(this * ROUNDING_FACTOR) / ROUNDING_FACTOR
+    private fun Float.roundToOneDecimal(): Float = round(this * Option.Movement.ROUNDING_FACTOR) / Option.Movement.ROUNDING_FACTOR
 
     /** Returns the X-axis acceleration. */
     fun getAccelX(): Float = accelX
@@ -70,11 +62,11 @@ class MovementResult(
     /** Returns Speed Over Ground in m/s. */
     fun getSogMs(): Float = sog
     /** Returns Speed Over Ground in km/h. */
-    fun getSogKmh(): Float = sog * MS_TO_KMH
+    fun getSogKmh(): Float = sog * Option.Movement.MS_TO_KMH
     /** Returns Speed Over Ground in mph. */
-    fun getSogMph(): Float = sog * MS_TO_MPH
+    fun getSogMph(): Float = sog * Option.Movement.MS_TO_MPH
     /** Returns Speed Over Ground in knots. */
-    fun getSogKnots(): Float = sog * MS_TO_KNOTS
+    fun getSogKnots(): Float = sog * Option.Movement.MS_TO_KNOTS
 
     /** Returns the Course Over Ground in degrees. */
     fun getCog(): Float = cog
@@ -84,7 +76,7 @@ class MovementResult(
     /** Returns the altitude in the current unit system. */
     fun getAltitude(): Double = when (unitSystem) {
         UnitSystem.METRIC_KMH, UnitSystem.METRIC_MS, UnitSystem.NAUTICAL -> altitude
-        UnitSystem.IMPERIAL -> altitude * METERS_TO_FEET
+        UnitSystem.IMPERIAL -> altitude * Option.Movement.METERS_TO_FEET
     }
 
     /** Returns the string representation of the altitude unit. */
@@ -96,7 +88,7 @@ class MovementResult(
     /** Returns the accuracy in the current unit system. */
     fun getAccuracy(): Float = when (unitSystem) {
         UnitSystem.METRIC_KMH, UnitSystem.METRIC_MS, UnitSystem.NAUTICAL -> accuracy
-        UnitSystem.IMPERIAL -> accuracy * METERS_TO_FEET_FLOAT
+        UnitSystem.IMPERIAL -> accuracy * Option.Movement.METERS_TO_FEET_FLOAT
     }
 
     /** Returns the string representation of the accuracy unit. */
@@ -110,10 +102,10 @@ class MovementResult(
      */
     private fun convertSpeed(speedMs: Float): Float {
         return when (unitSystem) {
-            UnitSystem.METRIC_KMH -> speedMs * MS_TO_KMH
+            UnitSystem.METRIC_KMH -> speedMs * Option.Movement.MS_TO_KMH
             UnitSystem.METRIC_MS -> speedMs
-            UnitSystem.IMPERIAL -> speedMs * MS_TO_MPH
-            UnitSystem.NAUTICAL -> speedMs * MS_TO_KNOTS
+            UnitSystem.IMPERIAL -> speedMs * Option.Movement.MS_TO_MPH
+            UnitSystem.NAUTICAL -> speedMs * Option.Movement.MS_TO_KNOTS
         }
     }
 }
