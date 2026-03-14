@@ -1,65 +1,79 @@
 /**
- * This file holds the processed movement data and provides methods to access
- * them in various unit systems (Metric, Imperial, Nautical).
+ * This class encapsulates the processed results of movement analysis.
+ * It provides methods to retrieve various motion parameters (speed, orientation, acceleration)
+ * formatted and converted according to a specific UnitSystem.
  */
 package com.example.blueboxpro.Process
 
+import com.example.blueboxpro.Option
 import kotlin.math.round
 
+/**
+ * Supported systems of measurement.
+ */
 enum class UnitSystem {
     METRIC_KMH, METRIC_MS, IMPERIAL, NAUTICAL
 }
 
+/**
+ * Represents a snapshot of processed movement data.
+ * 
+ * @param unitSystem The unit system used for conversions.
+ * @param accelX X-axis acceleration in m/s².
+ * @param accelY Y-axis acceleration in m/s².
+ * @param accelZ Z-axis acceleration in m/s².
+ * @param speedIMU Speed estimated from inertial sensors (m/s).
+ * @param speedGPS Speed provided by GPS (m/s).
+ * @param speedFused Speed resulting from sensor fusion (m/s).
+ * @param averageSpeed Rolling average of speed (m/s).
+ * @param sog Speed Over Ground (filtered) in m/s.
+ * @param cog Course Over Ground in degrees.
+ * @param azimuth Compass heading in degrees.
+ * @param altitude Altitude in meters.
+ * @param accuracy Horizontal GPS accuracy in meters.
+ */
 class MovementResult(
     private val unitSystem: UnitSystem,
-    // Accélérations (m/s²)
     private val accelX: Float,
     private val accelY: Float,
     private val accelZ: Float,
-    // Vitesses (m/s)
     private val speedIMU: Float,
     private val speedGPS: Float,
     private val speedFused: Float,
-    private val moyspeed: Float,
+    private val averageSpeed: Float,
     private val sog: Float,
-    // Navigation
-    private val cog: Float,      // degrés
-    private val azimuth: Float,  // degrés
-    // Position/Précision
-    private val altitude: Double, // mètres
-    private val accuracy: Float   // mètres
+    private val cog: Float,
+    private val azimuth: Float,
+    private val altitude: Double,
+    private val accuracy: Float
 ) {
-    companion object {
-        private const val MS_TO_KMH = 3.6f
-        private const val MS_TO_MPH = 2.23694f
-        private const val MS_TO_KNOTS = 1.94384f
-        private const val METERS_TO_FEET = 3.28084
-        private const val METERS_TO_FEET_FLOAT = 3.28084f
-        private const val ROUNDING_FACTOR = 10f
-    }
+    /** 
+     * Rounds a float to a specified number of decimals based on the global rounding factor.
+     */
+    private fun Float.roundToConfiguredDecimal(): Float = 
+        round(this * Option.Movement.ROUNDING_FACTOR) / Option.Movement.ROUNDING_FACTOR
 
-    /** Rounds a float value to one decimal place. */
-    private fun Float.roundToOneDecimal(): Float = round(this * ROUNDING_FACTOR) / ROUNDING_FACTOR
-
-    /** Returns the X-axis acceleration. */
+    /** Returns raw X-axis acceleration. */
     fun getAccelX(): Float = accelX
-    /** Returns the Y-axis acceleration. */
+    /** Returns raw Y-axis acceleration. */
     fun getAccelY(): Float = accelY
-    /** Returns the Z-axis acceleration. */
+    /** Returns raw Z-axis acceleration. */
     fun getAccelZ(): Float = accelZ
 
-    /** Returns the Speed Over Ground rounded to one decimal place. */
-    fun getSog(): Float = convertSpeed(sog).roundToOneDecimal()
-    /** Returns the IMU-derived speed rounded to one decimal place. */
-    fun getSpeedIMU(): Float = convertSpeed(speedIMU).roundToOneDecimal()
-    /** Returns the GPS-derived speed rounded to one decimal place. */
-    fun getSpeedGPS(): Float = convertSpeed(speedGPS).roundToOneDecimal()
-    /** Returns the fused speed rounded to one decimal place. */
-    fun getSpeedFused(): Float = convertSpeed(speedFused).roundToOneDecimal()
-    /** Returns the average speed rounded to one decimal place. */
-    fun getMoyspeed(): Float = convertSpeed(moyspeed).roundToOneDecimal()
+    /** Returns Speed Over Ground in the active unit system. */
+    fun getSog(): Float = convertSpeed(sog).roundToConfiguredDecimal()
+    /** Returns IMU speed in the active unit system. */
+    fun getSpeedIMU(): Float = convertSpeed(speedIMU).roundToConfiguredDecimal()
+    /** Returns GPS speed in the active unit system. */
+    fun getSpeedGPS(): Float = convertSpeed(speedGPS).roundToConfiguredDecimal()
+    /** Returns fused speed in the active unit system. */
+    fun getSpeedFused(): Float = convertSpeed(speedFused).roundToConfiguredDecimal()
+    /** Returns average speed in the active unit system. */
+    fun getMoyspeed(): Float = convertSpeed(averageSpeed).roundToConfiguredDecimal()
 
-    /** Returns the string representation of the speed unit. */
+    /** 
+     * Returns the localized unit string for speed.
+     */
     fun getSpeedUnit(): String = when (unitSystem) {
         UnitSystem.METRIC_KMH -> "km/h"
         UnitSystem.METRIC_MS -> "m/s"
@@ -67,53 +81,52 @@ class MovementResult(
         UnitSystem.NAUTICAL -> "kn"
     }
 
-    /** Returns Speed Over Ground in m/s. */
-    fun getSogMs(): Float = sog
-    /** Returns Speed Over Ground in km/h. */
-    fun getSogKmh(): Float = sog * MS_TO_KMH
-    /** Returns Speed Over Ground in mph. */
-    fun getSogMph(): Float = sog * MS_TO_MPH
-    /** Returns Speed Over Ground in knots. */
-    fun getSogKnots(): Float = sog * MS_TO_KNOTS
-
     /** Returns the Course Over Ground in degrees. */
     fun getCog(): Float = cog
-    /** Returns the Azimuth in degrees. */
+    /** Returns the Azimuth (heading) in degrees. */
     fun getAzimuth(): Float = azimuth
 
-    /** Returns the altitude in the current unit system. */
+    /** 
+     * Returns the altitude converted to the active unit system.
+     */
     fun getAltitude(): Double = when (unitSystem) {
         UnitSystem.METRIC_KMH, UnitSystem.METRIC_MS, UnitSystem.NAUTICAL -> altitude
-        UnitSystem.IMPERIAL -> altitude * METERS_TO_FEET
+        UnitSystem.IMPERIAL -> altitude * Option.Movement.METERS_TO_FEET
     }
 
-    /** Returns the string representation of the altitude unit. */
+    /** 
+     * Returns the unit label for altitude.
+     */
     fun getAltitudeUnit(): String = when (unitSystem) {
         UnitSystem.METRIC_KMH, UnitSystem.METRIC_MS, UnitSystem.NAUTICAL -> "m"
         UnitSystem.IMPERIAL -> "ft"
     }
 
-    /** Returns the accuracy in the current unit system. */
+    /** 
+     * Returns the GPS accuracy converted to the active unit system.
+     */
     fun getAccuracy(): Float = when (unitSystem) {
         UnitSystem.METRIC_KMH, UnitSystem.METRIC_MS, UnitSystem.NAUTICAL -> accuracy
-        UnitSystem.IMPERIAL -> accuracy * METERS_TO_FEET_FLOAT
+        UnitSystem.IMPERIAL -> accuracy * Option.Movement.METERS_TO_FEET_FLOAT
     }
 
-    /** Returns the string representation of the accuracy unit. */
+    /** 
+     * Returns the unit label for accuracy.
+     */
     fun getAccuracyUnit(): String = when (unitSystem) {
         UnitSystem.METRIC_KMH, UnitSystem.METRIC_MS, UnitSystem.NAUTICAL -> "m"
         UnitSystem.IMPERIAL -> "ft"
     }
 
     /**
-     * Converts a speed value from m/s to the selected unit system.
+     * Internal utility to convert m/s values to the selected unit system.
      */
     private fun convertSpeed(speedMs: Float): Float {
         return when (unitSystem) {
-            UnitSystem.METRIC_KMH -> speedMs * MS_TO_KMH
+            UnitSystem.METRIC_KMH -> speedMs * Option.Movement.MS_TO_KMH
             UnitSystem.METRIC_MS -> speedMs
-            UnitSystem.IMPERIAL -> speedMs * MS_TO_MPH
-            UnitSystem.NAUTICAL -> speedMs * MS_TO_KNOTS
+            UnitSystem.IMPERIAL -> speedMs * Option.Movement.MS_TO_MPH
+            UnitSystem.NAUTICAL -> speedMs * Option.Movement.MS_TO_KNOTS
         }
     }
 }

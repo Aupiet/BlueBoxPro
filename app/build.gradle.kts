@@ -55,6 +55,7 @@ dependencies {
     implementation("androidx.navigation:navigation-compose:2.8.5")
     implementation("com.google.android.gms:play-services-location:21.3.0")
     implementation(libs.kotlinx.serialization.json)
+    implementation("com.patrykandpatrick.vico:compose-m3:2.1.2")
     
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

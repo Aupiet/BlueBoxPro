@@ -19,6 +19,18 @@ import com.example.blueboxpro.Process.MovementProcessor
 import com.example.blueboxpro.Process.MovementResult
 import com.example.blueboxpro.R
 
+/**
+ * The main dashboard page (Page 1).
+ * 
+ * Displays real-time movement statistics calculated by the processor.
+ * Adaptive layout for portrait and landscape orientations.
+ * 
+ * @param processor The movement processor instance.
+ * @param refreshTrigger Trigger to force recomposition when sensor data changes.
+ * @param unitSystem Current unit system selected by the user.
+ * @param onNavigateToMap Callback to switch to the map tab.
+ * @param onNavigateToSettings Callback to switch to the settings tab.
+ */
 @Composable
 fun Page1(
     processor: MovementProcessor,
@@ -34,7 +46,6 @@ fun Page1(
     
     key(refreshTrigger) {
         if (isLandscape) {
-            // Landscape Layout: Side-by-side using a Row
             Row(
                 modifier = Modifier
                     .fillMaxSize()
@@ -45,12 +56,8 @@ fun Page1(
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     MovementDataDisplay(result)
                 }
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    TechnicalDetailsDisplay(result, processor)
-                }
             }
         } else {
-            // Portrait Layout: Vertical list using a Column
             Column(
                 modifier = Modifier
                     .fillMaxSize()
@@ -59,19 +66,23 @@ fun Page1(
                 verticalArrangement = Arrangement.Center,
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Text(text = stringResource(R.string.movement_analysis_title), style = MaterialTheme.typography.headlineSmall)
+                Text(
+                    text = stringResource(R.string.movement_analysis_title), 
+                    style = MaterialTheme.typography.headlineSmall
+                )
                 Spacer(modifier = Modifier.height(SPACING_LARGE))
                 
                 MovementDataDisplay(result)
-                
-                Spacer(modifier = Modifier.height(SPACING_XLARGE))
-                
-                TechnicalDetailsDisplay(result, processor)
             }
         }
     }
 }
 
+/**
+ * Displays SOG, COG, and Compass heading in a vertical stack.
+ * 
+ * @param result The movement result containing the current values and units.
+ */
 @Composable
 private fun MovementDataDisplay(result: MovementResult) {
     // Speed Over Ground (SOG)
@@ -103,26 +114,8 @@ private fun MovementDataDisplay(result: MovementResult) {
     )
 }
 
-@Composable
-private fun TechnicalDetailsDisplay(
-    result: MovementResult,
-    processor: MovementProcessor
-) {
-    Text(text = stringResource(R.string.technical_details), style = MaterialTheme.typography.labelLarge)
-    Text(text = "${stringResource(R.string.average_label)} ${SOG_FORMAT.format(result.getMoyspeed())} ${result.getSpeedUnit()}")
-    Text(text = "${stringResource(R.string.gps_label)} ${SOG_FORMAT.format(result.getSpeedGPS())} ${result.getSpeedUnit()}")
-    Text(text = "${stringResource(R.string.imu_label)} ${SOG_FORMAT.format(result.getSpeedIMU())} ${result.getSpeedUnit()}")
-    
-    Spacer(modifier = Modifier.height(SPACING_LARGE))
-
-    Button(onClick = { processor.reset() }) {
-        Text(stringResource(R.string.reset_button))
-    }
-}
-
 private val PADDING_MEDIUM = 16.dp
 private val SPACING_MEDIUM = 16.dp
 private val SPACING_LARGE = 24.dp
-private val SPACING_XLARGE = 32.dp
 private const val SOG_FORMAT = "%.2f"
 private const val DEGREE_FORMAT = "%.1f"

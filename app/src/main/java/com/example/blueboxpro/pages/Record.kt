@@ -6,7 +6,6 @@ package com.example.blueboxpro.pages
 import android.content.res.Configuration
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -28,16 +27,12 @@ import com.example.blueboxpro.Save.Recording
 import com.example.blueboxpro.Save.Session
 import com.example.blueboxpro.Process.MovementProcessor
 
-/**
- * Composable for the third page of the application, focused on session management.
- */
 @Composable
 fun Page3(
     processor: MovementProcessor,
     refreshTrigger: Int,
     onSessionClick: (Int) -> Unit
 ) {
-    val scrollState = rememberScrollState()
     val historyScrollState = rememberScrollState()
     val sessions = SessionManager.sessions
     val context = LocalContext.current
@@ -48,49 +43,35 @@ fun Page3(
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
 
-    LaunchedEffect(refreshTrigger) {
-        if (isRecording) {
-            currentRecording?.addPoint(
-                latitude = processor.lastLocation?.latitude ?: 0.0,
-                longitude = processor.lastLocation?.longitude ?: 0.0,
-                altitude = processor.altitude,
-                sog = processor.sog,
-                cog = processor.cog
-            )
-        }
-    }
-
     if (isLandscape) {
-        // Landscape Layout: Controls on the left, History on the right
         Row(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(PADDING_MEDIUM),
+                .padding(REC_PADDING_MEDIUM),
             verticalAlignment = Alignment.Top
         ) {
             Column(
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxHeight()
-                    .padding(end = PADDING_MEDIUM),
+                    .padding(end = REC_PADDING_MEDIUM),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
             ) {
                 Text(
                     text = stringResource(R.string.recording_title),
                     style = MaterialTheme.typography.headlineSmall,
-                    modifier = Modifier.padding(bottom = SPACING_LARGE),
-                    textAlign = TextAlign.Left
+                    modifier = Modifier.padding(bottom = REC_SPACING_LARGE),
+                    textAlign = TextAlign.Center
                 )
                 
                 RecordingControlCard(isRecording, currentRecording, sessions.size, context)
                 
-                //Spacer(modifier = Modifier.height(SPACING_MEDIUM))
-                
                 Text(
                     text = stringResource(R.string.export_info),
                     style = MaterialTheme.typography.bodySmall,
-                    textAlign = TextAlign.Center
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.padding(top = REC_SPACING_MEDIUM)
                 )
             }
 
@@ -104,46 +85,54 @@ fun Page3(
                 Text(
                     text = stringResource(R.string.recent_saves),
                     style = MaterialTheme.typography.titleMedium,
-                    modifier = Modifier.padding(bottom = SPACING_SMALL)
+                    modifier = Modifier.padding(bottom = REC_SPACING_SMALL)
                 )
                 
                 HistorySection(sessions, onSessionClick)
             }
         }
     } else {
-        // Portrait Layout: Vertical stack
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .verticalScroll(scrollState)
-                .padding(PADDING_MEDIUM),
+            modifier = Modifier.fillMaxSize(),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Text(
-                text = stringResource(R.string.recording_title),
-                style = MaterialTheme.typography.headlineSmall,
-                modifier = Modifier.padding(bottom = SPACING_LARGE)
-            )
+            Column(
+                modifier = Modifier.padding(REC_PADDING_MEDIUM),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(
+                    text = stringResource(R.string.recording_title),
+                    style = MaterialTheme.typography.headlineSmall,
+                    modifier = Modifier.padding(bottom = REC_SPACING_LARGE)
+                )
 
-            RecordingControlCard(isRecording, currentRecording, sessions.size, context)
+                RecordingControlCard(isRecording, currentRecording, sessions.size, context)
+            }
 
-            Spacer(modifier = Modifier.height(SPACING_LARGE))
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .verticalScroll(historyScrollState)
+                    .padding(horizontal = REC_PADDING_MEDIUM),
+                horizontalAlignment = Alignment.Start
+            ) {
+                Text(
+                    text = stringResource(R.string.recent_saves),
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.padding(bottom = REC_SPACING_SMALL)
+                )
 
-            Text(
-                text = stringResource(R.string.recent_saves),
-                style = MaterialTheme.typography.titleMedium,
-                modifier = Modifier.align(Alignment.Start).padding(bottom = SPACING_SMALL)
-            )
+                HistorySection(sessions, onSessionClick)
 
-            HistorySection(sessions, onSessionClick)
+                Spacer(modifier = Modifier.height(REC_SPACING_MEDIUM))
 
-            Spacer(modifier = Modifier.weight(1f))
-
-            Text(
-                text = stringResource(R.string.export_info),
-                style = MaterialTheme.typography.bodySmall,
-                modifier = Modifier.padding(top = SPACING_MEDIUM)
-            )
+                Text(
+                    text = stringResource(R.string.export_info),
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.fillMaxWidth().padding(bottom = REC_SPACING_MEDIUM),
+                    textAlign = TextAlign.Center
+                )
+            }
         }
     }
 }
@@ -156,36 +145,29 @@ private fun RecordingControlCard(
     context: android.content.Context
 ) {
     Card(
-        modifier = Modifier
-            .size(width = 300.dp, height = 200.dp),
+        modifier = Modifier.size(width = REC_CARD_WIDTH, height = REC_CARD_HEIGHT),
         colors = CardDefaults.cardColors(
             containerColor = if (isRecording) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.surfaceVariant
         )
     ) {
         Column(
-            modifier = Modifier.padding(PADDING_MEDIUM),
+            modifier = Modifier.padding(REC_PADDING_MEDIUM),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.SpaceBetween
-
         ) {
             Text(
-                text = if (isRecording) "Enregistrement en cours..." else stringResource(R.string.new_session),
+                text = if (isRecording) stringResource(R.string.recording_title) else stringResource(R.string.new_session),
                 style = MaterialTheme.typography.titleMedium
             )
             
             if (isRecording) {
                 Text(
-                    text = "Points capturés : ${currentRecording?.points?.size ?: 0}",
+                    text = "Points: ${currentRecording?.points?.size ?: 0}",
                     style = MaterialTheme.typography.bodySmall
                 )
             }
 
-            if (isRecording) {
-                Spacer(modifier = Modifier.height(85.dp))
-            }
-            else {
-                Spacer(modifier = Modifier.height(100.dp))
-            }
+            Spacer(modifier = Modifier.weight(1f))
             
             Button(
                 onClick = {
@@ -195,15 +177,14 @@ private fun RecordingControlCard(
                         SessionManager.stopRecording(context)
                     }
                 },
-                modifier = Modifier
-                    .fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth(),
                 colors = if (isRecording) ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error) else ButtonDefaults.buttonColors()
             ) {
                 Icon(
                     imageVector = if (isRecording) Icons.Default.Close else Icons.Default.PlayArrow, 
                     contentDescription = null
                 )
-                Spacer(modifier = Modifier.width(SPACING_SMALL))
+                Spacer(modifier = Modifier.width(REC_SPACING_SMALL))
                 Text(
                     text = if (isRecording) stringResource(R.string.stop_recording) else stringResource(R.string.start_recording)
                 )
@@ -217,11 +198,12 @@ private fun HistorySection(
     sessions: List<Session>,
     onSessionClick: (Int) -> Unit
 ) {
+    val context = LocalContext.current
     if (sessions.isEmpty()) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(vertical = EMPTY_STATE_VERTICAL_PADDING),
+                .padding(vertical = REC_EMPTY_PADDING),
             contentAlignment = Alignment.Center
         ) {
             Text(
@@ -236,9 +218,16 @@ private fun HistorySection(
             ListItem(
                 modifier = Modifier.clickable { onSessionClick(session.id) },
                 headlineContent = { Text("${session.name} - ${session.date}") },
-                supportingContent = { Text("${stringResource(R.string.duration_label)} ${session.duration} | ${stringResource(R.string.distance_label)} ${session.distance}") },
+                supportingContent = { 
+                    Text("${stringResource(R.string.duration_label)} ${session.duration} | ${stringResource(R.string.distance_label)} ${session.distance}") 
+                },
                 trailingContent = {
-                    IconButton(onClick = { /* TODO: Implement export functionality */ }) {
+                    IconButton(
+                        onClick = {
+                            val file = SessionManager.exportSessionToCsv(context, session)
+                            SessionManager.shareFile(context, file)
+                        }
+                    ) {
                         Icon(Icons.Default.Share, contentDescription = stringResource(R.string.export_label))
                     }
                 },
@@ -249,8 +238,10 @@ private fun HistorySection(
     }
 }
 
-private val PADDING_MEDIUM = 16.dp
-private val SPACING_SMALL = 8.dp
-private val SPACING_MEDIUM = 16.dp
-private val SPACING_LARGE = 24.dp
-private val EMPTY_STATE_VERTICAL_PADDING = 40.dp
+private val REC_PADDING_MEDIUM = 16.dp
+private val REC_SPACING_SMALL = 8.dp
+private val REC_SPACING_MEDIUM = 16.dp
+private val REC_SPACING_LARGE = 24.dp
+private val REC_EMPTY_PADDING = 40.dp
+private val REC_CARD_WIDTH = 300.dp
+private val REC_CARD_HEIGHT = 180.dp

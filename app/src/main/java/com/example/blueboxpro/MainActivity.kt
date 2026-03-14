@@ -1,6 +1,5 @@
 /**
- * Main activity of the application. Sets up navigation, handles permissions,
- * and initializes sensor listeners.
+ * Main entry point of the BlueBoxPro application.
  */
 package com.example.blueboxpro
 
@@ -27,11 +26,10 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.core.os.LocaleListCompat
 import androidx.core.view.WindowCompat
-import androidx.core.view.WindowInsetsCompat
-import androidx.core.view.WindowInsetsControllerCompat
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -45,7 +43,6 @@ import com.example.blueboxpro.ui.theme.BlueBoxProTheme
 import kotlinx.coroutines.launch
 import org.osmdroid.config.Configuration
 import org.osmdroid.util.GeoPoint
-import java.util.Locale
 
 class MainActivity : AppCompatActivity() {
     companion object {
@@ -55,38 +52,21 @@ class MainActivity : AppCompatActivity() {
         private const val ROUTE_SESSION_DETAIL_BASE = "session_detail"
         private const val ARG_SESSION_ID = "sessionId"
         private const val ROUTE_SESSION_DETAIL = "$ROUTE_SESSION_DETAIL_BASE/{$ARG_SESSION_ID}"
-        
-        private const val LANG_FR = "fr"
-        private const val LANG_EN = "en"
-        private const val LANG_NAME_FR = "Français"
-        
-        private const val DEFAULT_UNIT_SYSTEM = "METRIC_KMH"
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        
-        Configuration.getInstance().load(
-            applicationContext,
-            androidx.preference.PreferenceManager.getDefaultSharedPreferences(applicationContext)
-        )
-
+        Option.load(this)
+        Configuration.getInstance().load(this, androidx.preference.PreferenceManager.getDefaultSharedPreferences(this))
         SessionManager.loadSessions(this)
-
-        WindowCompat.setDecorFitsSystemWindows(window, false)
-        val controller = WindowCompat.getInsetsController(window, window.decorView)
-        controller?.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
-        controller?.hide(WindowInsetsCompat.Type.navigationBars())
-
         enableEdgeToEdge()
+        WindowCompat.setDecorFitsSystemWindows(window, false)
+
         setContent {
             val context = LocalContext.current
-            
-            var isDarkMode by remember { mutableStateOf(false) }
-            var unitSystemKey by remember { mutableStateOf(DEFAULT_UNIT_SYSTEM) }
-            var language by remember { 
-                mutableStateOf(if (Locale.getDefault().language == LANG_FR) LANG_NAME_FR else "English") 
-            }
+            var isDarkMode by remember { mutableStateOf(Option.UI.isDarkMode) }
+            var unitSystemKey by remember { mutableStateOf(Option.UI.unitSystem) }
+            var language by remember { mutableStateOf(Option.UI.language) }
 
             val processor = remember { MovementProcessor() }
             var lastLocationState by remember { mutableStateOf<GeoPoint?>(null) }
@@ -105,28 +85,19 @@ class MainActivity : AppCompatActivity() {
 
             DisposableEffect(Unit) {
                 captorListener.start()
-                onDispose {
-                    captorListener.stop()
-                    SessionManager.saveSessions(this@MainActivity)
-                }
+                onDispose { captorListener.stop() }
             }
 
             val permissionLauncher = rememberLauncherForActivityResult(
                 contract = ActivityResultContracts.RequestMultiplePermissions()
-            ) { /* TODO: Handle permission results */ }
+            ) { }
 
             LaunchedEffect(Unit) {
-                permissionLauncher.launch(
-                    arrayOf(
-                        Manifest.permission.ACCESS_FINE_LOCATION,
-                        Manifest.permission.ACCESS_COARSE_LOCATION
-                    )
-                )
+                permissionLauncher.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION))
             }
 
             BlueBoxProTheme(darkTheme = isDarkMode) {
                 val rootNavController = rememberNavController()
-                
                 NavHost(navController = rootNavController, startDestination = ROUTE_MAIN) {
                     composable(ROUTE_MAIN) {
                         MainScreen(
@@ -136,62 +107,44 @@ class MainActivity : AppCompatActivity() {
                             unitSystem = unitSystemKey,
                             language = language,
                             isDarkMode = isDarkMode,
-                            onDarkModeChange = { isDarkMode = it },
-                            onUnitSystemChange = { unitSystemKey = it },
+                            onDarkModeChange = { isDarkMode = it; Option.UI.isDarkMode = it; Option.save(this@MainActivity) },
+                            onUnitSystemChange = { unitSystemKey = it; Option.UI.unitSystem = it; Option.save(this@MainActivity) },
                             onLanguageChange = { newLang ->
-                                language = newLang
-                                val tag = if (newLang == LANG_NAME_FR) LANG_FR else LANG_EN
-                                val appLocale: LocaleListCompat = LocaleListCompat.forLanguageTags(tag)
-                                AppCompatDelegate.setApplicationLocales(appLocale)
+                                language = newLang; Option.UI.language = newLang; Option.save(this@MainActivity)
+                                val tag = if (newLang == Option.App.LANG_NAME_FR) Option.App.LANG_FR else Option.App.LANG_EN
+                                AppCompatDelegate.setApplicationLocales(LocaleListCompat.forLanguageTags(tag))
                             },
                             onOpenFullScreenMap = { rootNavController.navigate(ROUTE_FULL_MAP) },
                             onNavigateToAdvancedSettings = { rootNavController.navigate(ROUTE_ADVANCED_SETTINGS) },
-                            onNavigateToSessionDetail = { sessionId ->
-                                rootNavController.navigate("$ROUTE_SESSION_DETAIL_BASE/$sessionId")
-                            }
+                            onNavigateToSessionDetail = { sessionId -> rootNavController.navigate("$ROUTE_SESSION_DETAIL_BASE/$sessionId") }
                         )
                     }
                     composable(ROUTE_FULL_MAP) {
                         Page4(
                             location = lastLocationState,
+                            processor = processor,
+                            unitSystem = unitSystemKey,
                             onBack = { rootNavController.popBackStack() }
                         )
                     }
                     composable(ROUTE_ADVANCED_SETTINGS) {
-                        AdvancedSettingsPage(
-                            onBack = { rootNavController.popBackStack() }
-                        )
+                        AdvancedSettingsPage(processor = processor, refreshTrigger = refreshTrigger, unitSystem = unitSystemKey, onBack = { rootNavController.popBackStack() })
                     }
-                    composable(
-                        route = ROUTE_SESSION_DETAIL,
-                        arguments = listOf(navArgument(ARG_SESSION_ID) { type = NavType.IntType })
-                    ) { backStackEntry ->
+                    composable(ROUTE_SESSION_DETAIL, arguments = listOf(navArgument(ARG_SESSION_ID) { type = NavType.IntType })) { backStackEntry ->
                         val sessionId = backStackEntry.arguments?.getInt(ARG_SESSION_ID)
                         val session = SessionManager.sessions.find { it.id == sessionId }
-                        SessionDetailPage(
-                            session = session,
-                            onBack = { rootNavController.popBackStack() }
-                        )
+                        SessionDetailPage(session = session, onBack = { rootNavController.popBackStack() })
                     }
                 }
             }
         }
     }
 
-    override fun onStop() {
-        super.onStop()
-        SessionManager.saveSessions(this)
-    }
-
-    override fun onDestroy() {
-        super.onDestroy()
-        SessionManager.saveSessions(this)
-    }
+    override fun onStop() { super.onStop(); SessionManager.saveSessions(this); Option.save(this) }
+    override fun onDestroy() { super.onDestroy(); SessionManager.saveSessions(this); Option.save(this) }
 }
 
-/**
- * The main screen containing the bottom navigation and horizontal pager.
- */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainScreen(
     processor: MovementProcessor,
@@ -209,79 +162,33 @@ fun MainScreen(
 ) {
     val pagerState = rememberPagerState(pageCount = { 4 })
     val scope = rememberCoroutineScope()
-    
-    val tabs = listOf(
-        TabItem(Icons.Default.Home),
-        TabItem(Icons.Default.LocationOn),
-        TabItem(Icons.Default.PlayArrow),
-        TabItem(Icons.Default.Settings)
-    )
+    val tabs = listOf(TabItem(Icons.Default.Home, R.string.tab_home), TabItem(Icons.Default.LocationOn, R.string.tab_map), TabItem(Icons.Default.PlayArrow, R.string.tab_sessions), TabItem(Icons.Default.Settings, R.string.tab_settings))
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
+        topBar = { TopAppBar(title = { Text(stringResource(tabs[pagerState.currentPage].labelRes)) }) },
         bottomBar = {
             NavigationBar {
                 tabs.forEachIndexed { index, tab ->
                     NavigationBarItem(
                         selected = pagerState.currentPage == index,
-                        onClick = {
-                            scope.launch { pagerState.animateScrollToPage(index) }
-                        },
-                        icon = { 
-                            Icon(
-                                imageVector = tab.icon, 
-                                contentDescription = null,
-                                modifier = Modifier.size(32.dp)
-                            ) 
-                        },
-                        alwaysShowLabel = false
+                        onClick = { scope.launch { pagerState.animateScrollToPage(index) } },
+                        icon = { Icon(tab.icon, contentDescription = stringResource(tab.labelRes), modifier = Modifier.size(28.dp)) },
+                        label = { Text(stringResource(tab.labelRes)) }
                     )
                 }
             }
         }
     ) { innerPadding ->
-        HorizontalPager(
-            state = pagerState,
-            modifier = Modifier
-                .padding(innerPadding)
-                .fillMaxSize(),
-            beyondViewportPageCount = 1
-        ) { pageIndex ->
+        HorizontalPager(state = pagerState, modifier = Modifier.padding(innerPadding).fillMaxSize()) { pageIndex ->
             when (pageIndex) {
-                0 -> Page1(
-                    processor = processor,
-                    refreshTrigger = refreshTrigger,
-                    unitSystem = unitSystem,
-                    onNavigateToMap = { scope.launch { pagerState.animateScrollToPage(1) } },
-                    onNavigateToSettings = { scope.launch { pagerState.animateScrollToPage(3) } }
-                )
-                1 -> Page2(
-                    location = lastLocationState,
-                    processor = processor,
-                    unitSystem = unitSystem,
-                    onBack = { scope.launch { pagerState.animateScrollToPage(0) } },
-                    onOpenFullScreenMap = onOpenFullScreenMap
-                )
-                2 -> Page3(
-                    processor = processor,
-                    refreshTrigger = refreshTrigger,
-                    onSessionClick = onNavigateToSessionDetail
-                )
-                3 -> SettingsPage(
-                    isDarkMode = isDarkMode,
-                    onDarkModeChange = onDarkModeChange,
-                    unitSystem = unitSystem,
-                    onUnitSystemChange = onUnitSystemChange,
-                    language = language,
-                    onLanguageChange = onLanguageChange,
-                    onNavigateToAdvancedSettings = onNavigateToAdvancedSettings
-                )
+                0 -> Page1(processor, refreshTrigger, unitSystem, { scope.launch { pagerState.animateScrollToPage(1) } }, { scope.launch { pagerState.animateScrollToPage(3) } })
+                1 -> Page2(lastLocationState, processor, refreshTrigger, unitSystem, onOpenFullScreenMap)
+                2 -> Page3(processor, refreshTrigger, onNavigateToSessionDetail)
+                3 -> SettingsPage(isDarkMode, onDarkModeChange, unitSystem, onUnitSystemChange, language, onLanguageChange, onNavigateToAdvancedSettings)
             }
         }
     }
 }
 
-/**
- * Data class representing a tab item in the navigation bar.
- */
-data class TabItem(val icon: ImageVector)
+data class TabItem(val icon: ImageVector, val labelRes: Int)

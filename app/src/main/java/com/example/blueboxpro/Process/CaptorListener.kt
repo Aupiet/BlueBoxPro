@@ -1,6 +1,7 @@
 /**
  * This class listens to Android sensor events (accelerometer, magnetometer, GPS) 
  * and forwards the data to the MovementProcessor for computation.
+ * It manages the registration and unregistration of system sensor listeners.
  */
 package com.example.blueboxpro.Process
 
@@ -13,6 +14,13 @@ import android.hardware.SensorManager
 import android.os.Looper
 import com.google.android.gms.location.*
 
+/**
+ * Orchestrates sensor data collection.
+ * 
+ * @param context Android context for accessing system services.
+ * @param processor The movement processor that will receive and filter raw data.
+ * @param onDataUpdated Callback invoked whenever a sensor update has been processed.
+ */
 class CaptorListener(
     private val context: Context,
     private val processor: MovementProcessor,
@@ -34,6 +42,8 @@ class CaptorListener(
     private val geomagneticData = FloatArray(3)
     private var hasGravity = false
     private var hasGeomagnetic = false
+    private val rotationMatrix = FloatArray(ROTATION_MATRIX_SIZE)
+    private var hasRotationMatrix = false
 
     private val sensorEventListener = object : SensorEventListener {
         override fun onSensorChanged(event: SensorEvent?) {
@@ -46,7 +56,8 @@ class CaptorListener(
                         event.values[0],
                         event.values[1],
                         event.values[2],
-                        dt
+                        dt,
+                        if (hasRotationMatrix) rotationMatrix.copyOf() else null
                     )
                     onDataUpdated()
                 }
@@ -67,14 +78,15 @@ class CaptorListener(
 
     /**
      * Computes the device's orientation using gravity and geomagnetic sensor data.
+     * Updates the processor with the new azimuth.
      */
     private fun updateCompass() {
         if (hasGravity && hasGeomagnetic) {
-            val r = FloatArray(ROTATION_MATRIX_SIZE)
             val i = FloatArray(ROTATION_MATRIX_SIZE)
-            if (SensorManager.getRotationMatrix(r, i, gravityData, geomagneticData)) {
+            if (SensorManager.getRotationMatrix(rotationMatrix, i, gravityData, geomagneticData)) {
+                hasRotationMatrix = true
                 val orientation = FloatArray(ORIENTATION_ARRAY_SIZE)
-                SensorManager.getOrientation(r, orientation)
+                SensorManager.getOrientation(rotationMatrix, orientation)
                 
                 var azimuthDeg = Math.toDegrees(orientation[0].toDouble()).toFloat()
                 if (azimuthDeg < 0) azimuthDeg += FULL_CIRCLE_DEGREES
@@ -100,7 +112,8 @@ class CaptorListener(
     }
 
     /**
-     * Registers sensor listeners and requests location updates.
+     * Registers sensor listeners for linear acceleration, gravity, and magnetic field.
+     * Also initiates periodic GPS location updates.
      */
     fun start() {
         val linearAccel = sensorManager.getDefaultSensor(Sensor.TYPE_LINEAR_ACCELERATION)
@@ -114,18 +127,22 @@ class CaptorListener(
         requestLocationUpdates()
     }
 
+    /**
+     * Configures and starts high-accuracy location tracking.
+     */
     @SuppressLint("MissingPermission")
     private fun requestLocationUpdates() {
         val locationRequest = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, LOCATION_INTERVAL_MS).build()
         try {
             fusedLocationClient.requestLocationUpdates(locationRequest, locationCallback, Looper.getMainLooper())
         } catch (e: Exception) { 
-            // TODO: Handle location request error
+            // Silent fail if permission not granted during this specific call
         }
     }
 
     /**
-     * Unregisters sensor listeners and removes location updates.
+     * Unregisters all sensor listeners and stops GPS updates.
+     * Call this when the monitoring activity is destroyed or stopped.
      */
     fun stop() {
         sensorManager.unregisterListener(sensorEventListener)
