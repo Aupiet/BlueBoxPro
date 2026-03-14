@@ -138,19 +138,37 @@ class EkfSpeedEstimator(
 
     /**
      * Updates the internal state using an external velocity reference (e.g., GPS).
+     * The confidence given to the GPS depends on its accuracy and the difference (innovation).
      * 
      * @param refVelocity The reference velocity in m/s.
-     * @param rMeasurement The measurement noise covariance of the reference source.
+     * @param rMeasurement The expected measurement noise covariance.
      */
     fun update(refVelocity: Float, rMeasurement: Float) {
         val y = refVelocity - velocity
+        var actualR = rMeasurement
 
-        // Innovation gating: ignore GPS glitches
-        if (abs(y) > gateThreshold) {
-            return 
+        // Adaptive Innovation Gating & Weighting based on User Rules
+        if (currentGpsAccuracy <= Option.Process.MAX_ACCEPTABLE_ACCURACY) {
+            // GPS is GOOD
+            if (abs(y) > gateThreshold) {
+                // Large Difference: IMU missed a constant speed.
+                // WE FORCE KALMAN TO TRUST GPS (minimize measurement noise R)
+                actualR = 0.001f
+            } else {
+                // Small Difference: IMU is performing well.
+                // We let IMU breathe to smooth micro-variations.
+                // Leave actualR as calculated (or optionally increase it slightly)
+            }
+        } else {
+            // GPS is BAD
+            if (abs(y) > gateThreshold * 1.5f) { // slightly wider gate for bad GPS
+                // Large Difference & Bad GPS: Probable glitch. Reject entirely.
+                return 
+            }
+            // Small Difference & Bad GPS: Process normally, giving room to IMU.
         }
         
-        val s = pVv + rMeasurement
+        val s = pVv + actualR
         val kV = pVv / s
         val kB = pBv / s
         
@@ -175,9 +193,11 @@ class EkfSpeedEstimator(
 
     /**
      * Resets the filter state and covariance to initial conditions.
+     * 
+     * @param initialVelocity Optional initial velocity to start with.
      */
-    fun reset() {
-        velocity = 0f
+    fun reset(initialVelocity: Float = 0f) {
+        velocity = initialVelocity
         bias = 0f
         pVv = 1f
         pVb = 0f
@@ -185,6 +205,6 @@ class EkfSpeedEstimator(
         pBb = 1f
         stillTimeCounter = 0f
         currentGpsAccuracy = Float.MAX_VALUE
-        currentGpsSpeed = 0f
+        currentGpsSpeed = initialVelocity
     }
 }

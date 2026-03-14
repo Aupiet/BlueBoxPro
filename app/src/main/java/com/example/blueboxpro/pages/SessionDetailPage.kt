@@ -1,6 +1,6 @@
 /**
  * This page displays detailed information about a specific recorded session.
- * It includes a map trace, speed statistics, interactive charts for SOG and COG,
+ * It includes a map trace, speed statistics, interactive charts for SOG and Altitude,
  * and point-level details when a marker is tapped.
  */
 package com.example.blueboxpro.pages
@@ -42,9 +42,6 @@ import java.util.Locale
 
 /**
  * Detailed view for a specific session.
- * 
- * @param session The session object to display.
- * @param onBack Callback to return to the previous screen.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -56,7 +53,6 @@ fun SessionDetailPage(
     var showDeleteDialog by remember { mutableStateOf(false) }
     var selectedPointIndex by remember { mutableIntStateOf(-1) }
 
-    // Logic for deleting a session with confirmation
     if (showDeleteDialog && session != null) {
         AlertDialog(
             onDismissRequest = { showDeleteDialog = false },
@@ -165,8 +161,8 @@ fun SessionDetailPage(
 
                 Spacer(modifier = Modifier.height(SPACING_MEDIUM))
 
-                SectionHeader(stringResource(R.string.header_heading_chart))
-                CogChart(points)
+                SectionHeader(stringResource(R.string.header_altitude_chart))
+                AltitudeChart(points)
 
                 Spacer(modifier = Modifier.height(SPACING_LARGE))
             } else {
@@ -181,9 +177,6 @@ fun SessionDetailPage(
     }
 }
 
-/**
- * Top summary card for the session.
- */
 @Composable
 private fun SessionInfoHeader(session: Session) {
     Card(
@@ -206,9 +199,6 @@ private fun SessionInfoHeader(session: Session) {
     }
 }
 
-/**
- * Card displaying aggregated speed stats.
- */
 @Composable
 private fun SpeedStatisticsCard(points: List<GpsPoint>) {
     val sogValues = points.map { it.sog * Option.Movement.MS_TO_KMH }
@@ -233,9 +223,6 @@ private fun SpeedStatisticsCard(points: List<GpsPoint>) {
     }
 }
 
-/**
- * Individual stat display unit.
- */
 @Composable
 private fun StatColumn(label: String, value: String, unit: String) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -258,9 +245,6 @@ private fun StatColumn(label: String, value: String, unit: String) {
     }
 }
 
-/**
- * Detail card for a selected GPS point from the map or charts.
- */
 @Composable
 private fun SelectedPointCard(point: GpsPoint) {
     val timeStr = SimpleDateFormat("HH:mm:ss", Locale.US).format(Date(point.timestamp))
@@ -301,9 +285,6 @@ private fun SelectedPointCard(point: GpsPoint) {
     }
 }
 
-/**
- * Standard section header for the details page.
- */
 @Composable
 private fun SectionHeader(title: String) {
     Text(
@@ -318,18 +299,21 @@ private fun SectionHeader(title: String) {
 }
 
 /**
- * Line chart visualizing Speed Over Ground (SOG) over time.
+ * Line chart visualizing Speed Over Ground (SOG) relative to session duration.
  */
 @Composable
 private fun SpeedChart(points: List<GpsPoint>) {
     if (points.size < 2) return
 
     val modelProducer = remember { CartesianChartModelProducer() }
+    val startTime = points.first().timestamp
 
     LaunchedEffect(points) {
         modelProducer.runTransaction {
             lineSeries {
-                series(points.map { it.sog * Option.Movement.MS_TO_KMH })
+                val xValues = points.map { (it.timestamp - startTime).toDouble() / 1000.0 }
+                val yValues = points.map { it.sog.toDouble() * Option.Movement.MS_TO_KMH }
+                series(x = xValues, y = yValues)
             }
         }
     }
@@ -338,7 +322,9 @@ private fun SpeedChart(points: List<GpsPoint>) {
         chart = rememberCartesianChart(
             rememberLineCartesianLayer(),
             startAxis = VerticalAxis.rememberStart(),
-            bottomAxis = HorizontalAxis.rememberBottom()
+            bottomAxis = HorizontalAxis.rememberBottom(
+                valueFormatter = { _, value, _ -> formatDuration(value) }
+            )
         ),
         modelProducer = modelProducer,
         modifier = Modifier
@@ -348,18 +334,21 @@ private fun SpeedChart(points: List<GpsPoint>) {
 }
 
 /**
- * Line chart visualizing Course Over Ground (COG) over time.
+ * Line chart visualizing Altitude relative to session duration.
  */
 @Composable
-private fun CogChart(points: List<GpsPoint>) {
+private fun AltitudeChart(points: List<GpsPoint>) {
     if (points.size < 2) return
 
     val modelProducer = remember { CartesianChartModelProducer() }
+    val startTime = points.first().timestamp
 
     LaunchedEffect(points) {
         modelProducer.runTransaction {
             lineSeries {
-                series(points.map { it.cog.toDouble() })
+                val xValues = points.map { (it.timestamp - startTime).toDouble() / 1000.0 }
+                val yValues = points.map { it.altitude }
+                series(x = xValues, y = yValues)
             }
         }
     }
@@ -368,13 +357,25 @@ private fun CogChart(points: List<GpsPoint>) {
         chart = rememberCartesianChart(
             rememberLineCartesianLayer(),
             startAxis = VerticalAxis.rememberStart(),
-            bottomAxis = HorizontalAxis.rememberBottom()
+            bottomAxis = HorizontalAxis.rememberBottom(
+                valueFormatter = { _, value, _ -> formatDuration(value) }
+            )
         ),
         modelProducer = modelProducer,
         modifier = Modifier
             .fillMaxWidth()
             .height(CHART_HEIGHT)
     )
+}
+
+/**
+ * Formats seconds into a MM:SS string.
+ */
+private fun formatDuration(seconds: Double): String {
+    val totalSeconds = seconds.toLong()
+    val m = totalSeconds / 60
+    val s = totalSeconds % 60
+    return "%02d:%02d".format(m, s)
 }
 
 private val PADDING_MEDIUM = 16.dp

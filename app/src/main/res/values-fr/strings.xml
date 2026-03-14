@@ -68,6 +68,7 @@
     <string name="header_gps_trace">Tracé GPS</string>
     <string name="header_speed_chart">Vitesse (SOG)</string>
     <string name="header_heading_chart">Cap (COG)</string>
+    <string name="header_altitude_chart">Profil d\'altitude</string>
     <string name="no_points_recorded">Aucun point GPS enregistré pour cette session.</string>
     <string name="point_detail_header">Point n°%1$d — %2$s</string>
     
@@ -90,11 +91,14 @@
     <string name="label_speed_hist_size">Taille historique vitesse</string>
     <string name="desc_speed_hist_size">Nombre de points utilisés pour calculer la vitesse moyenne en temps réel.</string>
     
+    <!-- New Advanced Settings -->
     <string name="label_zupt_speed">Seuil vitesse ZUPT (m/s)</string>
     <string name="desc_zupt_speed">Seuil sous lequel l\'IMU considère l\'arrêt si l\'accélération est proche de zéro.</string>
-    
     <string name="label_max_dt">DT max arrière-plan (s)</string>
     <string name="desc_max_dt">Intervalle de temps maximum appliqué à un groupe de capteurs en arrière-plan.</string>
+    <string name="label_max_logical_speed">Vitesse logique max (km/h)</string>
+    <string name="desc_max_logical_speed">Ignore les points nécessitant de voyager plus vite que cette vitesse (filtre passe-bas).</string>
+
     <string name="header_calc_display">Calculs &amp; Affichage</string>
     <string name="label_rounding_factor">Facteur d\'arrondi</string>
     <string name="desc_rounding_factor">10 = 1 décale, 100 = 2 décimales. Définit la précision de l\'affichage.</string>
@@ -105,9 +109,6 @@
     <string name="desc_dist_threshold">Distance minimale entre deux points pour qu\'ils soient enregistrés.</string>
     <string name="label_recording_freq">Fréquence d\'enregistrement (Hz)</string>
     <string name="desc_recording_freq">Nombre de points enregistrés par seconde (ex : 1.0 = 1 pt/sec).</string>
-    
-    <string name="label_max_logical_speed">Vitesse logique max (km/h)</string>
-    <string name="desc_max_logical_speed">Ignore les points nécessitant de voyager plus vite que cette vitesse (filtre passe-bas).</string>
 
     <!-- Map Markers & Info -->
     <string name="marker_start">Départ</string>

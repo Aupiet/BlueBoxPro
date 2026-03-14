@@ -224,21 +224,39 @@ class MovementProcessor {
     }
 
     /**
+     * Initializes the speed estimator with a starting value.
+     * Prioritizes the provided GPS speed, otherwise defaults to 0.
+     * 
+     * @param initialGpsSpeed Optional speed from GPS to start with (m/s).
+     */
+    fun initSpeed(initialGpsSpeed: Float? = null) {
+        val startSpeed = initialGpsSpeed ?: 0f
+        
+        ekfEstimator.reset(startSpeed)
+        speedIMU = startSpeed
+        speedGPS = startSpeed
+        
+        // Fill history with the initial speed to avoid transition delays
+        val cleanSpeed = if (startSpeed < Option.Process.DEAD_ZONE_SPEED) 0f else startSpeed
+        for (i in speedHistory.indices) {
+            speedHistory[i] = cleanSpeed
+        }
+        averageSpeed = cleanSpeed
+        sog = cleanSpeed
+    }
+
+    /**
      * Resets all internal buffers and filters to their initial state.
      */
     fun reset() {
-        ekfEstimator.reset()
+        initSpeed(0f)
         lastFilteredAccel = 0f
         timeAccumulator = 0f
         accelX = 0f
         accelY = 0f
         accelZ = 0f
-        speedIMU = 0f
-        speedGPS = 0f
-        sog = 0f
         cog = 0f
         azimuth = 0f
-        averageSpeed = 0f
         altitude = 0.0
         gpsAccuracy = 0f
         lastGpsUpdateMillis = 0L
