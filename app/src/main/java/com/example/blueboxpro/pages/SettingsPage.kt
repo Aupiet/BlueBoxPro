@@ -49,12 +49,6 @@ fun SettingsPage(
             .verticalScroll(scrollState)
             .padding(PADDING_MEDIUM)
     ) {
-        Text(
-            text = stringResource(R.string.settings_title), 
-            style = MaterialTheme.typography.headlineMedium,
-            modifier = Modifier.padding(bottom = SPACING_LARGE)
-        )
-
         // Dark Mode Toggle
         ListItem(
             headlineContent = { Text(stringResource(R.string.dark_mode)) },

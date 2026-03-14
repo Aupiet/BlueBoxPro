@@ -67,19 +67,37 @@ class Recording(val name: String) {
     fun addPoint(latitude: Double, longitude: Double, altitude: Double, sog: Float, cog: Float) {
         val now = System.currentTimeMillis()
         if (now - lastPointTimestamp >= Option.Save.RECORDING_INTERVAL_MS) {
-            val newId = _points.size + 1
-            _points.add(
-                GpsPoint(
-                    id = newId,
-                    latitude = latitude,
-                    longitude = longitude,
-                    altitude = altitude,
-                    sog = sog,
-                    cog = cog,
-                    timestamp = now
+            var isLogical = true
+            if (_points.isNotEmpty()) {
+                val lastP = _points.last()
+                val dtHours = (now - lastP.timestamp) / Option.Save.MILLIS_IN_HOUR.toDouble()
+                if (dtHours > 0.0) {
+                    val distMeters = SessionManager.haversine(
+                        lastP.latitude, lastP.longitude,
+                        latitude, longitude
+                    )
+                    val requiredSpeedKmh = (distMeters / Option.Save.METERS_IN_KILOMETER) / dtHours
+                    if (requiredSpeedKmh > Option.Save.MAX_LOGICAL_SPEED_KMH) {
+                        isLogical = false
+                    }
+                }
+            }
+
+            if (isLogical) {
+                val newId = _points.size + 1
+                _points.add(
+                    GpsPoint(
+                        id = newId,
+                        latitude = latitude,
+                        longitude = longitude,
+                        altitude = altitude,
+                        sog = sog,
+                        cog = cog,
+                        timestamp = now
+                    )
                 )
-            )
-            lastPointTimestamp = now
+                lastPointTimestamp = now
+            }
         }
     }
 
@@ -182,7 +200,7 @@ object SessionManager {
     /**
      * Internal helper for great-circle distance calculation.
      */
-    private fun haversine(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Double {
+    internal fun haversine(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Double {
         val r = 6371000.0 // Earth radius in meters
         val dLat = Math.toRadians(lat2 - lat1)
         val dLon = Math.toRadians(lon2 - lon1)
@@ -197,13 +215,15 @@ object SessionManager {
      * Updates the active recording with the latest processor state.
      */
     fun updateRecording(processor: MovementProcessor) {
-        activeRecording?.addPoint(
-            latitude = processor.lastLocation?.latitude ?: 0.0,
-            longitude = processor.lastLocation?.longitude ?: 0.0,
-            altitude = processor.altitude,
-            sog = processor.sog,
-            cog = processor.cog
-        )
+        processor.lastLocation?.let { loc ->
+            activeRecording?.addPoint(
+                latitude = loc.latitude,
+                longitude = loc.longitude,
+                altitude = processor.altitude,
+                sog = processor.sog,
+                cog = processor.cog
+            )
+        }
     }
 
     /**

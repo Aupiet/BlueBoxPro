@@ -52,12 +52,15 @@ fun AdvancedSettingsPage(
     var azimuthAlpha by remember { mutableStateOf(Option.Process.AZIMUTH_ALPHA.toString()) }
     var speedHistorySize by remember { mutableStateOf(Option.Process.SPEED_HISTORY_SIZE.toString()) }
     var lpfAccelAlpha by remember { mutableStateOf(Option.Process.LPF_ACCEL_ALPHA.toString()) }
+    var zuptSpeedThreshold by remember { mutableStateOf(Option.Process.ZUPT_SPEED_THRESHOLD.toString()) }
+    var maxDtBackground by remember { mutableStateOf(Option.Process.MAX_DT_BACKGROUND.toString()) }
     
     var roundingFactor by remember { mutableStateOf(Option.Movement.ROUNDING_FACTOR.toString()) }
     
     var fileName by remember { mutableStateOf(Option.Save.FILE_NAME) }
     var distanceThreshold by remember { mutableStateOf(Option.Save.DISTANCE_THRESHOLD_METERS.toString()) }
     var recordingFrequency by remember { mutableStateOf(Option.Save.RECORDING_FREQUENCY_HZ.toString()) }
+    var maxLogicalSpeed by remember { mutableStateOf(Option.Save.MAX_LOGICAL_SPEED_KMH.toString()) }
 
     Scaffold(
         topBar = {
@@ -81,12 +84,15 @@ fun AdvancedSettingsPage(
                             Option.Process.AZIMUTH_ALPHA = azimuthAlpha.toFloat()
                             Option.Process.SPEED_HISTORY_SIZE = speedHistorySize.toInt()
                             Option.Process.LPF_ACCEL_ALPHA = lpfAccelAlpha.toFloat()
+                            Option.Process.ZUPT_SPEED_THRESHOLD = zuptSpeedThreshold.toFloat()
+                            Option.Process.MAX_DT_BACKGROUND = maxDtBackground.toFloat()
                             
                             Option.Movement.ROUNDING_FACTOR = roundingFactor.toFloat()
                             
                             Option.Save.FILE_NAME = fileName
                             Option.Save.DISTANCE_THRESHOLD_METERS = distanceThreshold.toDouble()
                             Option.Save.RECORDING_FREQUENCY_HZ = recordingFrequency.toFloat()
+                            Option.Save.MAX_LOGICAL_SPEED_KMH = maxLogicalSpeed.toDouble()
                             
                             // Persist to storage
                             Option.save(context)
@@ -162,6 +168,18 @@ fun AdvancedSettingsPage(
                 description = stringResource(R.string.desc_speed_hist_size),
                 isInteger = true
             )
+            SettingField(
+                label = stringResource(R.string.label_zupt_speed),
+                value = zuptSpeedThreshold,
+                onValueChange = { zuptSpeedThreshold = it },
+                description = stringResource(R.string.desc_zupt_speed)
+            )
+            SettingField(
+                label = stringResource(R.string.label_max_dt),
+                value = maxDtBackground,
+                onValueChange = { maxDtBackground = it },
+                description = stringResource(R.string.desc_max_dt)
+            )
 
             HorizontalDivider(modifier = Modifier.padding(vertical = SPACING_MEDIUM))
 
@@ -196,6 +214,12 @@ fun AdvancedSettingsPage(
                 value = recordingFrequency,
                 onValueChange = { recordingFrequency = it },
                 description = stringResource(R.string.desc_recording_freq)
+            )
+            SettingField(
+                label = stringResource(R.string.label_max_logical_speed),
+                value = maxLogicalSpeed,
+                onValueChange = { maxLogicalSpeed = it },
+                description = stringResource(R.string.desc_max_logical_speed)
             )
             
             Spacer(modifier = Modifier.height(SPACING_LARGE))

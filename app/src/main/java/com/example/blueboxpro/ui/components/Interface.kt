@@ -2,10 +2,13 @@
  * Reusable UI components for map displays, navigation panels, and spatial data visualization.
  * This file provides specialized components like a circular map with an integrated compass,
  * as well as generic map containers using Osmdroid.
+ * 
+ * It supports adaptive layouts for portrait and landscape orientations.
  */
 package com.example.blueboxpro.ui.components
 
 import android.annotation.SuppressLint
+import android.content.res.Configuration
 import android.graphics.Bitmap
 import android.graphics.Canvas as AndroidCanvas
 import android.graphics.Color as AndroidColor
@@ -32,6 +35,7 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
@@ -40,12 +44,12 @@ import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
+import com.example.blueboxpro.Option
 import com.example.blueboxpro.Process.MovementProcessor
 import com.example.blueboxpro.Process.MovementResult
+import com.example.blueboxpro.R
 import com.example.blueboxpro.Save.GpsPoint
 import com.example.blueboxpro.Save.SessionManager
-import com.example.blueboxpro.R
-import com.example.blueboxpro.Option
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.BoundingBox
 import org.osmdroid.util.GeoPoint
@@ -57,9 +61,10 @@ import kotlin.math.min
 import kotlin.math.sin
 
 /**
- * Collection of map-related UI components.
+ * Collection of map-related UI components and layout logic.
  */
 object MapComponents {
+    // UI Scaling and Layout constants
     private const val MAP_CORNER_RADIUS_DP = 16
     private const val DEFAULT_ZOOM_LEVEL = 17.0
     private const val SESSION_MAP_ZOOM = 16.0
@@ -101,9 +106,18 @@ object MapComponents {
     private const val TRIANGLE_BOTTOM_MARGIN_RATIO = 0.8f
     
     private val DIVIDER_PADDING_VERTICAL = 4.dp
+    private val PADDING_MEDIUM = 16.dp
+    private val SPACING_MEDIUM = 12.dp
 
     /**
-     * Main layout for the navigation/map page.
+     * Main layout for the navigation/map dashboard.
+     * Adapts to orientation: side-by-side in landscape, stacked in portrait.
+     * 
+     * @param location Current user location.
+     * @param processor movement processor for speed/orientation.
+     * @param unitSystem chosen unit system.
+     * @param onBack navigation callback.
+     * @param onMapClick callback when clicking the map.
      */
     @Composable
     fun Page2Layout(
@@ -116,36 +130,77 @@ object MapComponents {
         val result = processor.getResult(unitSystem)
         val activeRecording = SessionManager.activeRecording
         val recordingPoints = activeRecording?.points ?: emptyList()
+        
+        val configuration = LocalConfiguration.current
+        val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
 
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(PADDING_MEDIUM),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Box(
+        if (isLandscape) {
+            Row(
                 modifier = Modifier
-                    .weight(1f)
-                    .aspectRatio(1f),
-                contentAlignment = Alignment.Center
+                    .fillMaxSize()
+                    .padding(PADDING_MEDIUM),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceEvenly
             ) {
-                CircularMapWithCompass(
-                    location = location,
-                    cog = result.getCog(),
-                    azimuth = result.getAzimuth(),
-                    recordingPoints = recordingPoints,
-                    onMapClick = onMapClick
-                )
+                // Circular Map on the left
+                Box(
+                    modifier = Modifier
+                        .fillMaxHeight()
+                        .aspectRatio(1f),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularMapWithCompass(
+                        location = location,
+                        cog = result.getCog(),
+                        azimuth = result.getAzimuth(),
+                        recordingPoints = recordingPoints,
+                        onMapClick = onMapClick
+                    )
+                }
+
+                Spacer(modifier = Modifier.width(SPACING_MEDIUM))
+
+                // Info Dashboard on the right
+                Box(
+                    modifier = Modifier.weight(1f),
+                    contentAlignment = Alignment.Center
+                ) {
+                    NavigationInfoPanel(location, result)
+                }
             }
+        } else {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(PADDING_MEDIUM),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                // Circular Map on top
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .aspectRatio(1f),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularMapWithCompass(
+                        location = location,
+                        cog = result.getCog(),
+                        azimuth = result.getAzimuth(),
+                        recordingPoints = recordingPoints,
+                        onMapClick = onMapClick
+                    )
+                }
 
-            Spacer(modifier = Modifier.height(SPACING_MEDIUM))
+                Spacer(modifier = Modifier.height(SPACING_MEDIUM))
 
-            NavigationInfoPanel(location, result)
+                // Info Dashboard at the bottom
+                NavigationInfoPanel(location, result)
+            }
         }
     }
 
     /**
-     * Circular clipped map with a compass rose overlaid.
+     * Circular clipped map with an overlayed rotating compass ring.
      */
     @SuppressLint("ClickableViewAccessibility")
     @Composable
@@ -323,7 +378,7 @@ object MapComponents {
     }
 
     /**
-     * Creates a triangle Bitmap used as the position marker.
+     * Creates a triangle Bitmap for use as a map marker.
      */
     private fun createTriangleBitmap(size: Int, rotation: Float, color: Int): Bitmap {
         val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
@@ -356,7 +411,7 @@ object MapComponents {
     }
 
     /**
-     * Info panel showing SOG, COG, coordinates, altitude.
+     * Info panel displaying live navigation stats (SOG, COG, Lat/Lon, Alt).
      */
     @Composable
     private fun NavigationInfoPanel(location: GeoPoint?, result: MovementResult) {
@@ -383,6 +438,9 @@ object MapComponents {
         }
     }
 
+    /**
+     * Simple row helper for InfoPanel.
+     */
     @Composable
     private fun InfoRow(label: String, value: String) {
         Row(
@@ -405,7 +463,7 @@ object MapComponents {
     }
 
     /**
-     * A reusable card component that displays a map.
+     * Reusable map card with standard styling.
      */
     @Composable
     fun ReusableMapCard(
@@ -449,7 +507,7 @@ object MapComponents {
     }
 
     /**
-     * Standard map container.
+     * The underlying Map container using AndroidView interop.
      */
     @SuppressLint("ClickableViewAccessibility")
     @Composable
@@ -491,7 +549,7 @@ object MapComponents {
     }
 
     /**
-     * Displays a session trace on the map.
+     * Map container specialized for displaying historical session traces.
      */
     @SuppressLint("ClickableViewAccessibility")
     @Composable
@@ -597,7 +655,4 @@ object MapComponents {
             modifier = modifier
         )
     }
-
-    private val PADDING_MEDIUM = 16.dp
-    private val SPACING_MEDIUM = 12.dp
 }

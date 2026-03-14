@@ -6,6 +6,7 @@
 package com.example.blueboxpro.Process
 
 import kotlin.math.abs
+import com.example.blueboxpro.Option
 
 /**
  * A basic 1D Kalman Filter used for smoothing one-dimensional sensor data.
@@ -68,6 +69,12 @@ class EkfSpeedEstimator(
     var bias = 0f
         private set
 
+    /** Injected GPS accuracy for ZUPT validation. */
+    var currentGpsAccuracy: Float = Float.MAX_VALUE
+    
+    /** Injected GPS speed for ZUPT validation. */
+    var currentGpsSpeed: Float = 0f
+
     // Covariance matrix P elements
     private var pVv = 1f
     private var pVb = 0f
@@ -93,10 +100,20 @@ class EkfSpeedEstimator(
     fun predict(aMes: Float, dt: Float) {
         // Apply ZUPT if the device is stationary
         if (abs(aMes) < ZUPT_ACCEL_THRESHOLD) {
-            stillTimeCounter += dt
-            if (stillTimeCounter > ZUPT_TIME_REQUIRED) {
-                applyZupt()
-                return
+            val isStopped = if (currentGpsAccuracy < Option.Process.MAX_ACCEPTABLE_ACCURACY) {
+                currentGpsSpeed < Option.Process.ZUPT_SPEED_THRESHOLD
+            } else {
+                velocity < Option.Process.ZUPT_SPEED_THRESHOLD
+            }
+
+            if (isStopped) {
+                stillTimeCounter += dt
+                if (stillTimeCounter > ZUPT_TIME_REQUIRED) {
+                    applyZupt()
+                    return
+                }
+            } else {
+                stillTimeCounter = 0f
             }
         } else {
             stillTimeCounter = 0f
@@ -167,5 +184,7 @@ class EkfSpeedEstimator(
         pBv = 0f
         pBb = 1f
         stillTimeCounter = 0f
+        currentGpsAccuracy = Float.MAX_VALUE
+        currentGpsSpeed = 0f
     }
 }

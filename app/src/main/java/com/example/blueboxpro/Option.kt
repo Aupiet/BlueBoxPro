@@ -41,6 +41,7 @@ object Option {
         val fileName: String = "sessiontrace.json",
         val distanceThresholdMeters: Double = 3.0,
         val recordingFrequencyHz: Float = 1.0f,
+        val maxLogicalSpeedKmh: Double = 300.0,
         // UI Preferences
         val isDarkMode: Boolean = false,
         val language: String = "English",
@@ -80,6 +81,8 @@ object Option {
         
         var DEAD_ZONE_SPEED = 0.3f
         var MEDIAN_WINDOW_SIZE = 5
+        var ZUPT_SPEED_THRESHOLD = 1.0f
+        var MAX_DT_BACKGROUND = 0.1f
         
         const val GPS_MIN_SPEED_FOR_COG = 0.5f
         const val R_MEASUREMENT_MIN_FACTOR = 1f
@@ -107,6 +110,7 @@ object Option {
         var FILE_NAME = "sessiontrace.json"
         var DISTANCE_THRESHOLD_METERS = 3.0
         var RECORDING_FREQUENCY_HZ = 1.0f
+        var MAX_LOGICAL_SPEED_KMH = 300.0
         /** Interval between recording points in milliseconds. */
         val RECORDING_INTERVAL_MS: Long get() = (1000f / RECORDING_FREQUENCY_HZ).toLong()
         
@@ -153,6 +157,7 @@ object Option {
             fileName = Save.FILE_NAME,
             distanceThresholdMeters = Save.DISTANCE_THRESHOLD_METERS,
             recordingFrequencyHz = Save.RECORDING_FREQUENCY_HZ,
+            maxLogicalSpeedKmh = Save.MAX_LOGICAL_SPEED_KMH,
             isDarkMode = UI.isDarkMode,
             language = UI.language,
             unitSystem = UI.unitSystem
@@ -194,6 +199,7 @@ object Option {
             Save.FILE_NAME = data.fileName
             Save.DISTANCE_THRESHOLD_METERS = data.distanceThresholdMeters
             Save.RECORDING_FREQUENCY_HZ = data.recordingFrequencyHz
+            Save.MAX_LOGICAL_SPEED_KMH = data.maxLogicalSpeedKmh
 
             UI.isDarkMode = data.isDarkMode
             UI.language = data.language

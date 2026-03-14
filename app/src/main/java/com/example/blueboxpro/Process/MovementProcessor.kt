@@ -125,7 +125,8 @@ class MovementProcessor {
                 (1f - Option.Process.LPF_ACCEL_ALPHA) * lastFilteredAccel
         lastFilteredAccel = filteredAccel
 
-        timeAccumulator += dt
+        val safeDt = dt.coerceAtMost(Option.Process.MAX_DT_BACKGROUND)
+        timeAccumulator += safeDt
         while (timeAccumulator >= Option.Process.FIXED_DT) {
             ekfEstimator.predict(filteredAccel, Option.Process.FIXED_DT)
             timeAccumulator -= Option.Process.FIXED_DT
@@ -191,6 +192,9 @@ class MovementProcessor {
         if (gpsS > 0.5f) {
             cog = gpsBearing
         }
+        
+        ekfEstimator.currentGpsAccuracy = accuracy
+        ekfEstimator.currentGpsSpeed = gpsS
 
         val rGps = Option.Process.R_BASE_GPS * (accuracy / Option.Process.MAX_ACCEPTABLE_ACCURACY).coerceAtLeast(1f)
         ekfEstimator.update(gpsS, rGps)

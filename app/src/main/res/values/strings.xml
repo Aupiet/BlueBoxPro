@@ -98,6 +98,12 @@
     <string name="desc_azimuth_alpha">Smoothing factor for compass (0.0 to 1.0). Lower = stable but slower.</string>
     <string name="label_speed_hist_size">Speed History Size</string>
     <string name="desc_speed_hist_size">Number of points used for real-time average calculation.</string>
+    
+    <string name="label_zupt_speed">ZUPT Speed Threshold (m/s)</string>
+    <string name="desc_zupt_speed">Threshold below which IMU considers device stopped if acceleration is near zero.</string>
+    
+    <string name="label_max_dt">Max Background DT (s)</string>
+    <string name="desc_max_dt">Maximum time interval applied to a single batched sensor reading in background.</string>
     <string name="header_calc_display">Calculation &amp; Display</string>
     <string name="label_rounding_factor">Rounding Factor</string>
     <string name="desc_rounding_factor">10 = 1 decimal, 100 = 2 decimals. Defines display precision.</string>
@@ -108,6 +114,9 @@
     <string name="desc_dist_threshold">Minimum distance between points to be recorded.</string>
     <string name="label_recording_freq">Recording Frequency (Hz)</string>
     <string name="desc_recording_freq">Number of points recorded per second (e.g., 1.0 = 1 pt/sec).</string>
+    
+    <string name="label_max_logical_speed">Max Logical Speed (km/h)</string>
+    <string name="desc_max_logical_speed">Ignore points that require traveling faster than this speed to reach (low-pass filter).</string>
 
     <!-- Accessibility / Generic -->
     <string name="content_desc_back">Back</string>

@@ -1,6 +1,5 @@
 /**
  * This page manages session recordings and displays the history of saved sessions.
- * It provides UI for starting/stopping recordings and viewing/sharing past sessions.
  */
 package com.example.blueboxpro.pages
 
@@ -28,23 +27,12 @@ import com.example.blueboxpro.Save.Recording
 import com.example.blueboxpro.Save.Session
 import com.example.blueboxpro.Process.MovementProcessor
 
-/**
- * The recording and history dashboard (Page 3).
- * 
- * Allows users to start or stop a tracking session.
- * Displays a list of previously recorded sessions with export capabilities.
- * 
- * @param processor The movement processor providing live data for recording.
- * @param refreshTrigger Trigger to notify the page that new data is available.
- * @param onSessionClick Callback when a historical session is selected for detail view.
- */
 @Composable
 fun Page3(
     processor: MovementProcessor,
     refreshTrigger: Int,
     onSessionClick: (Int) -> Unit
 ) {
-    val scrollState = rememberScrollState()
     val historyScrollState = rememberScrollState()
     val sessions = SessionManager.sessions
     val context = LocalContext.current
@@ -55,39 +43,26 @@ fun Page3(
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
 
-    // Handle data point accumulation during recording
-    LaunchedEffect(refreshTrigger) {
-        if (isRecording) {
-            currentRecording?.addPoint(
-                latitude = processor.lastLocation?.latitude ?: 0.0,
-                longitude = processor.lastLocation?.longitude ?: 0.0,
-                altitude = processor.altitude,
-                sog = processor.sog,
-                cog = processor.cog
-            )
-        }
-    }
-
     if (isLandscape) {
         Row(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(PADDING_MEDIUM),
+                .padding(REC_PADDING_MEDIUM),
             verticalAlignment = Alignment.Top
         ) {
             Column(
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxHeight()
-                    .padding(end = PADDING_MEDIUM),
+                    .padding(end = REC_PADDING_MEDIUM),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
             ) {
                 Text(
                     text = stringResource(R.string.recording_title),
                     style = MaterialTheme.typography.headlineSmall,
-                    modifier = Modifier.padding(bottom = SPACING_LARGE),
-                    textAlign = TextAlign.Left
+                    modifier = Modifier.padding(bottom = REC_SPACING_LARGE),
+                    textAlign = TextAlign.Center
                 )
                 
                 RecordingControlCard(isRecording, currentRecording, sessions.size, context)
@@ -95,7 +70,8 @@ fun Page3(
                 Text(
                     text = stringResource(R.string.export_info),
                     style = MaterialTheme.typography.bodySmall,
-                    textAlign = TextAlign.Center
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.padding(top = REC_SPACING_MEDIUM)
                 )
             }
 
@@ -109,7 +85,7 @@ fun Page3(
                 Text(
                     text = stringResource(R.string.recent_saves),
                     style = MaterialTheme.typography.titleMedium,
-                    modifier = Modifier.padding(bottom = SPACING_SMALL)
+                    modifier = Modifier.padding(bottom = REC_SPACING_SMALL)
                 )
                 
                 HistorySection(sessions, onSessionClick)
@@ -117,49 +93,50 @@ fun Page3(
         }
     } else {
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .verticalScroll(scrollState)
-                .padding(PADDING_MEDIUM),
+            modifier = Modifier.fillMaxSize(),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Text(
-                text = stringResource(R.string.recording_title),
-                style = MaterialTheme.typography.headlineSmall,
-                modifier = Modifier.padding(bottom = SPACING_LARGE)
-            )
+            Column(
+                modifier = Modifier.padding(REC_PADDING_MEDIUM),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(
+                    text = stringResource(R.string.recording_title),
+                    style = MaterialTheme.typography.headlineSmall,
+                    modifier = Modifier.padding(bottom = REC_SPACING_LARGE)
+                )
 
-            RecordingControlCard(isRecording, currentRecording, sessions.size, context)
+                RecordingControlCard(isRecording, currentRecording, sessions.size, context)
+            }
 
-            Spacer(modifier = Modifier.height(SPACING_LARGE))
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .verticalScroll(historyScrollState)
+                    .padding(horizontal = REC_PADDING_MEDIUM),
+                horizontalAlignment = Alignment.Start
+            ) {
+                Text(
+                    text = stringResource(R.string.recent_saves),
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.padding(bottom = REC_SPACING_SMALL)
+                )
 
-            Text(
-                text = stringResource(R.string.recent_saves),
-                style = MaterialTheme.typography.titleMedium,
-                modifier = Modifier.align(Alignment.Start).padding(bottom = SPACING_SMALL)
-            )
+                HistorySection(sessions, onSessionClick)
 
-            HistorySection(sessions, onSessionClick)
+                Spacer(modifier = Modifier.height(REC_SPACING_MEDIUM))
 
-            Spacer(modifier = Modifier.weight(1f))
-
-            Text(
-                text = stringResource(R.string.export_info),
-                style = MaterialTheme.typography.bodySmall,
-                modifier = Modifier.padding(top = SPACING_MEDIUM)
-            )
+                Text(
+                    text = stringResource(R.string.export_info),
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.fillMaxWidth().padding(bottom = REC_SPACING_MEDIUM),
+                    textAlign = TextAlign.Center
+                )
+            }
         }
     }
 }
 
-/**
- * Card containing the recording start/stop button and status.
- * 
- * @param isRecording True if a session is currently being recorded.
- * @param currentRecording The active recording object, if any.
- * @param sessionCount Total number of existing sessions (used for default naming).
- * @param context Android context for file operations.
- */
 @Composable
 private fun RecordingControlCard(
     isRecording: Boolean,
@@ -168,14 +145,13 @@ private fun RecordingControlCard(
     context: android.content.Context
 ) {
     Card(
-        modifier = Modifier
-            .size(width = 300.dp, height = 200.dp),
+        modifier = Modifier.size(width = REC_CARD_WIDTH, height = REC_CARD_HEIGHT),
         colors = CardDefaults.cardColors(
             containerColor = if (isRecording) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.surfaceVariant
         )
     ) {
         Column(
-            modifier = Modifier.padding(PADDING_MEDIUM),
+            modifier = Modifier.padding(REC_PADDING_MEDIUM),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.SpaceBetween
         ) {
@@ -191,7 +167,7 @@ private fun RecordingControlCard(
                 )
             }
 
-            Spacer(modifier = Modifier.height(if (isRecording) 85.dp else 100.dp))
+            Spacer(modifier = Modifier.weight(1f))
             
             Button(
                 onClick = {
@@ -208,7 +184,7 @@ private fun RecordingControlCard(
                     imageVector = if (isRecording) Icons.Default.Close else Icons.Default.PlayArrow, 
                     contentDescription = null
                 )
-                Spacer(modifier = Modifier.width(SPACING_SMALL))
+                Spacer(modifier = Modifier.width(REC_SPACING_SMALL))
                 Text(
                     text = if (isRecording) stringResource(R.string.stop_recording) else stringResource(R.string.start_recording)
                 )
@@ -217,12 +193,6 @@ private fun RecordingControlCard(
     }
 }
 
-/**
- * Lists past sessions with details and sharing options.
- * 
- * @param sessions List of completed sessions.
- * @param onSessionClick Callback when a session is tapped.
- */
 @Composable
 private fun HistorySection(
     sessions: List<Session>,
@@ -233,7 +203,7 @@ private fun HistorySection(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(vertical = EMPTY_STATE_VERTICAL_PADDING),
+                .padding(vertical = REC_EMPTY_PADDING),
             contentAlignment = Alignment.Center
         ) {
             Text(
@@ -268,8 +238,10 @@ private fun HistorySection(
     }
 }
 
-private val PADDING_MEDIUM = 16.dp
-private val SPACING_SMALL = 8.dp
-private val SPACING_LARGE = 24.dp
-private val EMPTY_STATE_VERTICAL_PADDING = 40.dp
-private val SPACING_MEDIUM = 16.dp
+private val REC_PADDING_MEDIUM = 16.dp
+private val REC_SPACING_SMALL = 8.dp
+private val REC_SPACING_MEDIUM = 16.dp
+private val REC_SPACING_LARGE = 24.dp
+private val REC_EMPTY_PADDING = 40.dp
+private val REC_CARD_WIDTH = 300.dp
+private val REC_CARD_HEIGHT = 180.dp
