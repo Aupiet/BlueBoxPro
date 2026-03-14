@@ -40,8 +40,23 @@ object Option {
         val roundingFactor: Float = 10f,
         val fileName: String = "sessiontrace.json",
         val distanceThresholdMeters: Double = 3.0,
-        val recordingFrequencyHz: Float = 1.0f
+        val recordingFrequencyHz: Float = 1.0f,
+        // UI Preferences
+        val isDarkMode: Boolean = false,
+        val language: String = "English",
+        val unitSystem: String = "METRIC_KMH"
     )
+
+    /**
+     * Application level constants.
+     */
+    object App {
+        const val LANG_FR = "fr"
+        const val LANG_EN = "en"
+        const val LANG_NAME_FR = "Français"
+        const val LANG_NAME_EN = "English"
+        const val DEFAULT_UNIT_SYSTEM = "METRIC_KMH"
+    }
 
     /**
      * Settings related to sensor data processing and filtering algorithms.
@@ -65,6 +80,9 @@ object Option {
         
         var DEAD_ZONE_SPEED = 0.3f
         var MEDIAN_WINDOW_SIZE = 5
+        
+        const val GPS_MIN_SPEED_FOR_COG = 0.5f
+        const val R_MEASUREMENT_MIN_FACTOR = 1f
     }
 
     /**
@@ -77,6 +95,9 @@ object Option {
         const val METERS_TO_FEET = 3.28084
         const val METERS_TO_FEET_FLOAT = 3.28084f
         var ROUNDING_FACTOR = 10f
+        
+        const val EARTH_RADIUS_METERS = 6371000.0
+        const val CIRCLE_HALF_RATIO = 2.0
     }
 
     /**
@@ -90,6 +111,7 @@ object Option {
         val RECORDING_INTERVAL_MS: Long get() = (1000f / RECORDING_FREQUENCY_HZ).toLong()
         
         const val DATE_FORMAT = "dd/MM/yyyy"
+        const val TIME_FORMAT = "HH:mm:ss"
         const val MILLIS_IN_HOUR = 3600000L
         const val MILLIS_IN_MINUTE = 60000L
         const val MILLIS_IN_SECOND = 1000L
@@ -97,6 +119,16 @@ object Option {
         const val DURATION_FORMAT = "%02d:%02d:%02d"
         const val KM_FORMAT = "%.2f km"
         const val M_FORMAT = "%.0f m"
+        const val EXPORT_CSV_SPEED_FORMAT = "%.2f km/h"
+    }
+
+    /**
+     * UI specific preferences.
+     */
+    object UI {
+        var isDarkMode = false
+        var language = App.LANG_NAME_EN
+        var unitSystem = App.DEFAULT_UNIT_SYSTEM
     }
 
     /**
@@ -120,13 +152,16 @@ object Option {
             roundingFactor = Movement.ROUNDING_FACTOR,
             fileName = Save.FILE_NAME,
             distanceThresholdMeters = Save.DISTANCE_THRESHOLD_METERS,
-            recordingFrequencyHz = Save.RECORDING_FREQUENCY_HZ
+            recordingFrequencyHz = Save.RECORDING_FREQUENCY_HZ,
+            isDarkMode = UI.isDarkMode,
+            language = UI.language,
+            unitSystem = UI.unitSystem
         )
         try {
             val jsonString = json.encodeToString(data)
             file.writeText(jsonString)
         } catch (e: Exception) {
-            // Error logged by system or ignored if non-critical
+            // Error ignored
         }
     }
 
@@ -159,6 +194,10 @@ object Option {
             Save.FILE_NAME = data.fileName
             Save.DISTANCE_THRESHOLD_METERS = data.distanceThresholdMeters
             Save.RECORDING_FREQUENCY_HZ = data.recordingFrequencyHz
+
+            UI.isDarkMode = data.isDarkMode
+            UI.language = data.language
+            UI.unitSystem = data.unitSystem
         } catch (e: Exception) {
             // Defaults remain if loading fails
         }

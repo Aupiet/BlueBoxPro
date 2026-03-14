@@ -40,8 +40,8 @@
     <string name="label_lat">Lat</string>
     <string name="label_lon">Lon</string>
     <string name="label_alt">Alt</string>
-    <string name="label_sog">SOG</string>
-    <string name="label_cog">COG</string>
+    <string name="label_sog" translatable="false">SOG</string>
+    <string name="label_cog" translatable="false">COG</string>
     <string name="marker_start">Start</string>
     <string name="marker_end">End</string>
     <string name="marker_position">Position</string>

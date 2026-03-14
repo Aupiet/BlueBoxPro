@@ -131,6 +131,7 @@ fun AdvancedSettingsPage(
             TechnicalInfoRow(stringResource(R.string.label_filtered_avg), "${SOG_FORMAT.format(result.getMoyspeed())} ${result.getSpeedUnit()}")
             TechnicalInfoRow(stringResource(R.string.label_gps_source), "${SOG_FORMAT.format(result.getSpeedGPS())} ${result.getSpeedUnit()}")
             TechnicalInfoRow(stringResource(R.string.label_imu_source), "${SOG_FORMAT.format(result.getSpeedIMU())} ${result.getSpeedUnit()}")
+            TechnicalInfoRow(stringResource(R.string.accuracy_label), "${SOG_FORMAT.format(result.getAccuracy())} ${result.getAccuracyUnit()}")
 
             HorizontalDivider(modifier = Modifier.padding(vertical = SPACING_MEDIUM))
 
