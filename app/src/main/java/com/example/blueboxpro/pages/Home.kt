@@ -10,13 +10,11 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
@@ -32,6 +30,8 @@ import com.example.blueboxpro.R
 import com.example.blueboxpro.Save.SessionManager
 import java.text.SimpleDateFormat
 import java.util.*
+import kotlin.math.cos
+import kotlin.math.sin
 
 /**
  * The landing page of the application (Home Page).
@@ -75,7 +75,6 @@ fun Page1(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = if (isLandscape) Arrangement.SpaceEvenly else Arrangement.Top
     ) {
-        // Unified Header Block
         CombinedHeaderCard(
             dateStr = dateFormatter.format(currentTime),
             timeStr = timeFormatter.format(currentTime),
@@ -86,7 +85,6 @@ fun Page1(
 
         Spacer(modifier = Modifier.height(HOME_SPACING_SMALL))
 
-        // Wind Information Block - Always shown
         WindInfoCard(weatherData, unitSystem, isLandscape)
         
         Spacer(modifier = Modifier.height(HOME_SPACING_SMALL))
@@ -127,7 +125,6 @@ private fun WindInfoCard(
 ) {
     val unitSystem = Converter.getUnitSystem(unitSystemStr)
     
-    // Create a temporary result to get the unit string correctly
     val resultTemplate = com.example.blueboxpro.Process.MovementResult(
         unitSystem = unitSystem,
         accelX = 0f, accelY = 0f, accelZ = 0f,
@@ -162,28 +159,27 @@ private fun WindInfoCard(
                     Text(text = "DIRECTION", style = MaterialTheme.typography.labelSmall)
                     Box(contentAlignment = Alignment.Center, modifier = Modifier.size(if (isLandscape) 40.dp else 50.dp)) {
                         Canvas(modifier = Modifier.fillMaxSize()) {
+                            val radius = size.minDimension / 2
                             drawCircle(color = Color.Gray.copy(alpha = 0.3f), style = androidx.compose.ui.graphics.drawscope.Stroke(width = 2.dp.toPx()))
+                            
+                            val angleRad = Math.toRadians(windDir - 90.0)
+                            val dotRadius = 4.dp.toPx()
+                            val dotX = (size.width / 2) + (radius) * cos(angleRad).toFloat()
+                            val dotY = (size.height / 2) + (radius) * sin(angleRad).toFloat()
+                            
+                            drawCircle(
+                                color = Color.Red,
+                                radius = dotRadius,
+                                center = Offset(dotX, dotY)
+                            )
                         }
-                        Icon(
-                            imageVector = Icons.Default.PlayArrow,
-                            contentDescription = null,
-                            modifier = Modifier.size(if (isLandscape) 24.dp else 30.dp).rotate(windDir.toFloat() - 90f),
-                            tint = MaterialTheme.colorScheme.tertiary
-                        )
                     }
                     Text(text = "%.0f°".format(windDir), style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold)
                 }
             }
         } else {
-            Box(
-                modifier = Modifier.fillMaxWidth().padding(16.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = "VENT : En attente...",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.6f)
-                )
+            Box(modifier = Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) {
+                Text(text = "VENT : En attente...", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.6f))
             }
         }
     }

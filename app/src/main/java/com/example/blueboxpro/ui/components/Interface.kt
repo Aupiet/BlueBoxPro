@@ -24,9 +24,6 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -34,7 +31,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
@@ -47,6 +43,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -81,16 +78,19 @@ object MapComponents {
 
     private const val COMPASS_RING_WIDTH_RATIO = 0.12f
     private const val COMPASS_ANIM_DURATION_MS = 300
+    
     private const val COMPASS_BACKGROUND_ALPHA = 0.75f
     private const val COMPASS_BORDER_ALPHA = 0.3f
     private const val COMPASS_BORDER_WIDTH = 1.5f
     private const val COMPASS_TICK_STEP = 5
     private const val COMPASS_MAJOR_TICK_STEP = 30
     private const val COMPASS_MID_TICK_STEP = 10
+    
     private const val COMPASS_MAJOR_TICK_LENGTH_RATIO = 0.15f
     private const val COMPASS_MID_TICK_LENGTH_RATIO = 0.3f
     private const val COMPASS_MINOR_TICK_LENGTH_RATIO = 0.45f
     private const val COMPASS_TICK_OUTER_GAP_RATIO = 0.05f
+    
     private const val COMPASS_MAJOR_TICK_WIDTH = 2.5f
     private const val COMPASS_MINOR_TICK_WIDTH = 1.0f
     
@@ -130,9 +130,9 @@ object MapComponents {
                 Spacer(modifier = Modifier.width(16.dp))
                 Column(modifier = Modifier.weight(2.2f).fillMaxHeight(), verticalArrangement = Arrangement.Center) {
                     Column(modifier = Modifier.padding(bottom = 4.dp)) {
-                        CoordinateText("Latitude", LAT_LON_FORMAT.format(location?.latitude ?: 0.0), fontSize = 16.sp)
-                        CoordinateText("Altitude", "${STAT_FORMAT.format(result.getAltitude())} ${result.getAltitudeUnit()}", fontSize = 16.sp)
-                        CoordinateText("Longitude", LAT_LON_FORMAT.format(location?.longitude ?: 0.0), fontSize = 16.sp)
+                        CoordinateText("Latitude", LAT_LON_FORMAT.format(location?.latitude ?: 0.0), fontSize = 10.sp)
+                        CoordinateText("Altitude", "${STAT_FORMAT.format(result.getAltitude())} ${result.getAltitudeUnit()}", fontSize = 10.sp)
+                        CoordinateText("Longitude", LAT_LON_FORMAT.format(location?.longitude ?: 0.0), fontSize = 10.sp)
                     }
                     
                     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -144,7 +144,7 @@ object MapComponents {
                             } ?: "..."
                             CircularGauge("VENT (${result.getSpeedUnit()})", windS, 90, MaterialTheme.colorScheme.tertiary)
                             val windD = weatherData?.currentWeather?.windDirection?.toFloat()
-                            CircularGauge("DIR. (°)", windD?.let { "${it.toInt()}" } ?: "...",  90, MaterialTheme.colorScheme.tertiary)
+                            CircularGaugeWithDirectionPoint("DIR. (°)", windD?.let { "${it.toInt()}" } ?: "...", windD, 90, MaterialTheme.colorScheme.tertiary)
                         }
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
                             val temp = weatherData?.currentWeather?.temperature?.let { "${it.toInt()}" } ?: "..."
@@ -164,27 +164,27 @@ object MapComponents {
                 }
                 Spacer(modifier = Modifier.height(16.dp))
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-                    Text(text = "Long: ${LAT_LON_FORMAT.format(location?.longitude ?: 0.0)}", style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp))
-                    Text(text = "Lat: ${LAT_LON_FORMAT.format(location?.latitude ?: 0.0)}", style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp))
-                    Text(text = "Alt: ${STAT_FORMAT.format(result.getAltitude())}", style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp))
+                    Text(text = "Long: ${LAT_LON_FORMAT.format(location?.longitude ?: 0.0)}", style = MaterialTheme.typography.bodySmall.copy(fontSize = 9.sp))
+                    Text(text = "Lat: ${LAT_LON_FORMAT.format(location?.latitude ?: 0.0)}", style = MaterialTheme.typography.bodySmall.copy(fontSize = 9.sp))
+                    Text(text = "Alt: ${STAT_FORMAT.format(result.getAltitude())}", style = MaterialTheme.typography.bodySmall.copy(fontSize = 9.sp))
                 }
                 Spacer(modifier = Modifier.height(12.dp))
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-                        CircularGauge("SOG (${result.getSpeedUnit()})", STAT_FORMAT.format(result.getSog()), 90)
+                        CircularGauge("SOG (${result.getSpeedUnit()})", STAT_FORMAT.format(result.getSog()), 78)
                         val windS = weatherData?.currentWeather?.windSpeed?.let { 
                             val conv = Converter.convertSpeed(it.toFloat() / 3.6f, unitSystem)
                             STAT_FORMAT.format(conv)
                         } ?: "..."
-                        CircularGauge("VENT (${result.getSpeedUnit()})", windS, 90, MaterialTheme.colorScheme.tertiary)
+                        CircularGauge("VENT (${result.getSpeedUnit()})", windS, 78, MaterialTheme.colorScheme.tertiary)
                         val windD = weatherData?.currentWeather?.windDirection?.toFloat()
-                        CircularGauge("DIR. (°)", windD?.let { "${it.toInt()}" } ?: "...", 90, MaterialTheme.colorScheme.tertiary)
+                        CircularGaugeWithDirectionPoint("DIR. (°)", windD?.let { "${it.toInt()}" } ?: "...", windD, 78, MaterialTheme.colorScheme.tertiary)
                     }
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-                        CircularGauge("PITCH (°)", "${result.getPitch()}", 90, MaterialTheme.colorScheme.primary)
-                        CircularGauge("ROLL (°)", "${result.getRoll()}", 90, MaterialTheme.colorScheme.secondary)
+                        CircularGauge("PITCH (°)", "${result.getPitch()}", 78, MaterialTheme.colorScheme.primary)
+                        CircularGauge("ROLL (°)", "${result.getRoll()}", 78, MaterialTheme.colorScheme.secondary)
                         val temp = weatherData?.currentWeather?.temperature?.let { "${it.toInt()}" } ?: "..."
-                        CircularGauge("TEMP (°C)", temp, 90, MaterialTheme.colorScheme.primary)
+                        CircularGauge("TEMP (°C)", temp, 78, MaterialTheme.colorScheme.primary)
                     }
                 }
             }
@@ -200,25 +200,32 @@ object MapComponents {
     }
 
     @Composable
-    private fun CircularGauge(label: String, value: String, size: Int, color: Color = MaterialTheme.colorScheme.onSurface) {
+    private fun CircularGauge(label: String, value: String, gaugeSize: Int, color: Color = MaterialTheme.colorScheme.onSurface) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Box(modifier = Modifier.size(size.dp).border(2.dp, color, CircleShape), contentAlignment = Alignment.Center) {
-                Text(text = value, style = MaterialTheme.typography.bodyMedium.copy(fontSize = 32.sp), fontWeight = FontWeight.Bold, color = color, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+            Box(modifier = Modifier.size(gaugeSize.dp).border(2.dp, color, CircleShape), contentAlignment = Alignment.Center) {
+                Text(text = value, style = MaterialTheme.typography.bodyMedium.copy(fontSize = 32.sp), fontWeight = FontWeight.Bold, color = color, textAlign = TextAlign.Center)
             }
-            Text(text = label, style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp), color = color)
+            Text(text = label, style = MaterialTheme.typography.labelSmall.copy(fontSize = 8.sp), color = color)
         }
     }
 
     @Composable
-    private fun CircularGaugeWithArrow(label: String, value: String, angle: Float?, size: Int, color: Color = MaterialTheme.colorScheme.onSurface) {
+    private fun CircularGaugeWithDirectionPoint(label: String, value: String, angle: Float?, gaugeSize: Int, color: Color = MaterialTheme.colorScheme.onSurface) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Box(modifier = Modifier.size(size.dp).border(2.dp, color, CircleShape), contentAlignment = Alignment.Center) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(text = value, style = MaterialTheme.typography.bodyMedium.copy(fontSize = 22.sp), fontWeight = FontWeight.Bold, color = color, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+            Box(modifier = Modifier.size(gaugeSize.dp), contentAlignment = Alignment.Center) {
+                Canvas(modifier = Modifier.fillMaxSize()) {
+                    val radius = size.width / 2
+                    drawCircle(color = color, style = Stroke(width = 2.dp.toPx()))
+                    
                     if (angle != null) {
-                        Icon(imageVector = Icons.Default.PlayArrow, contentDescription = null, modifier = Modifier.size(24.dp).rotate(angle - 90f), tint = color)
+                        val angleRad = Math.toRadians(angle.toDouble() - 90.0)
+                        val dotRadius = 4.dp.toPx()
+                        val dotX = (size.width / 2) + (radius) * cos(angleRad).toFloat()
+                        val dotY = (size.height / 2) + (radius) * sin(angleRad).toFloat()
+                        drawCircle(color = Color.Red, radius = dotRadius, center = Offset(dotX, dotY))
                     }
                 }
+                Text(text = value, style = MaterialTheme.typography.bodyMedium.copy(fontSize = 32.sp), fontWeight = FontWeight.Bold, color = color, textAlign = TextAlign.Center)
             }
             Text(text = label, style = MaterialTheme.typography.labelSmall.copy(fontSize = 8.sp), color = color)
         }

@@ -12,13 +12,13 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.LocationOn
-import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -31,6 +31,8 @@ import com.example.blueboxpro.Process.Converter
 import com.example.blueboxpro.Process.WeatherData
 import com.example.blueboxpro.Process.WeatherManager
 import org.osmdroid.util.GeoPoint
+import kotlin.math.cos
+import kotlin.math.sin
 
 /**
  * Composable that displays a full-screen interactive map.
@@ -97,12 +99,12 @@ fun Page4(
                     // Temperature
                     WeatherChip(text = "${weatherData.currentWeather.temperature.toInt()}°C")
                     
-                    // Wind Speed & Direction
+                    // Wind Speed & Direction (Point on perimeter)
                     val unitSystemEnum = Converter.getUnitSystem(unitSystem)
                     val windSpeedKmh = weatherData.currentWeather.windSpeed.toFloat()
                     val convertedWindSpeed = Converter.convertSpeed(windSpeedKmh / 3.6f, unitSystemEnum)
                     
-                    WeatherChipWithArrow(
+                    WeatherChipWithDirection(
                         speedText = "%.1f".format(convertedWindSpeed),
                         unitText = result?.getSpeedUnit() ?: "km/h",
                         angle = weatherData.currentWeather.windDirection.toFloat()
@@ -164,7 +166,7 @@ private fun WeatherChip(text: String) {
 }
 
 @Composable
-private fun WeatherChipWithArrow(speedText: String, unitText: String, angle: Float) {
+private fun WeatherChipWithDirection(speedText: String, unitText: String, angle: Float) {
     Surface(
         color = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.9f),
         shape = RoundedCornerShape(20.dp),
@@ -173,7 +175,7 @@ private fun WeatherChipWithArrow(speedText: String, unitText: String, angle: Flo
         Row(
             modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(6.dp)
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             Text(
                 text = "$speedText $unitText",
@@ -182,16 +184,22 @@ private fun WeatherChipWithArrow(speedText: String, unitText: String, angle: Flo
                 color = MaterialTheme.colorScheme.onTertiaryContainer
             )
             
-            Box(contentAlignment = Alignment.Center, modifier = Modifier.size(18.dp)) {
+            Box(contentAlignment = Alignment.Center, modifier = Modifier.size(20.dp)) {
                 Canvas(modifier = Modifier.fillMaxSize()) {
-                    drawCircle(color = Color.Gray.copy(alpha = 0.3f), style = androidx.compose.ui.graphics.drawscope.Stroke(width = 1.dp.toPx()))
+                    val radius = size.minDimension / 2
+                    drawCircle(color = Color.Gray.copy(alpha = 0.3f), style = Stroke(width = 1.5.dp.toPx()))
+                    
+                    val angleRad = Math.toRadians(angle.toDouble() - 90.0)
+                    val dotRadius = 3.dp.toPx()
+                    val dotX = (size.width / 2) + (radius) * cos(angleRad).toFloat()
+                    val dotY = (size.height / 2) + (radius) * sin(angleRad).toFloat()
+                    
+                    drawCircle(
+                        color = Color.Red,
+                        radius = dotRadius,
+                        center = Offset(dotX, dotY)
+                    )
                 }
-                Icon(
-                    imageVector = Icons.Default.PlayArrow,
-                    contentDescription = null,
-                    modifier = Modifier.size(14.dp).rotate(angle - 90f),
-                    tint = MaterialTheme.colorScheme.onTertiaryContainer
-                )
             }
         }
     }

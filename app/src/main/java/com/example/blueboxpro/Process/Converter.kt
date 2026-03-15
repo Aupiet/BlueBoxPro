@@ -41,10 +41,6 @@ object Converter {
         }
     }
 
-    fun convertAlt(altitudeMeters: Double, unitSystemStr: String): Double {
-        return convertAlt(altitudeMeters, getUnitSystem(unitSystemStr))
-    }
-
     /**
      * Temperature conversions.
      */
