@@ -49,7 +49,7 @@ class MovementProcessor {
     var azimuth: Float = 0f
     private var averageAzimuth: Float = 0f
 
-    //angles
+    // Attitude (Angles in degrees)
     var pitch: Int = 0
     var roll: Int = 0
 
@@ -61,12 +61,21 @@ class MovementProcessor {
      * @return A MovementResult containing converted values.
      */
     fun getResult(unitSystemStr: String): MovementResult {
-        val unitSystem = when {
-            unitSystemStr.contains("km/h") -> UnitSystem.METRIC_KMH
-            unitSystemStr.contains("m/s") -> UnitSystem.METRIC_MS
-            unitSystemStr.contains("Imperial") || unitSystemStr.contains("Impérial") -> UnitSystem.IMPERIAL
-            unitSystemStr.contains("Nautical") || unitSystemStr.contains("Nautique") -> UnitSystem.NAUTICAL
-            else -> UnitSystem.METRIC_KMH
+        val unitSystem = when (unitSystemStr) {
+            "METRIC_KMH" -> UnitSystem.METRIC_KMH
+            "METRIC_MS" -> UnitSystem.METRIC_MS
+            "IMPERIAL" -> UnitSystem.IMPERIAL
+            "NAUTICAL" -> UnitSystem.NAUTICAL
+            else -> {
+                // Compatibility fallback for localized strings or legacy values
+                when {
+                    unitSystemStr.contains("km/h") -> UnitSystem.METRIC_KMH
+                    unitSystemStr.contains("m/s") -> UnitSystem.METRIC_MS
+                    unitSystemStr.contains("Imperial") || unitSystemStr.contains("Impérial") -> UnitSystem.IMPERIAL
+                    unitSystemStr.contains("Nautical") || unitSystemStr.contains("Nautique") -> UnitSystem.NAUTICAL
+                    else -> UnitSystem.METRIC_KMH
+                }
+            }
         }
         return MovementResult(
             unitSystem = unitSystem,

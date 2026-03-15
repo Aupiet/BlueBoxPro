@@ -32,6 +32,8 @@ data class GpsPoint(
     val altitude: Double,
     val sog: Float,
     val cog: Float,
+    val pitch: Int = 0,
+    val roll: Int = 0,
     val timestamp: Long
 )
 
@@ -64,7 +66,7 @@ class Recording(val name: String) {
     /**
      * Captures a new data point if the recording interval has elapsed.
      */
-    fun addPoint(latitude: Double, longitude: Double, altitude: Double, sog: Float, cog: Float) {
+    fun addPoint(latitude: Double, longitude: Double, altitude: Double, sog: Float, cog: Float, pitch: Int, roll: Int) {
         val now = System.currentTimeMillis()
         if (now - lastPointTimestamp >= Option.Save.RECORDING_INTERVAL_MS) {
             var isLogical = true
@@ -93,6 +95,8 @@ class Recording(val name: String) {
                         altitude = altitude,
                         sog = sog,
                         cog = cog,
+                        pitch = pitch,
+                        roll = roll,
                         timestamp = now
                     )
                 )
@@ -221,7 +225,9 @@ object SessionManager {
                 longitude = loc.longitude,
                 altitude = processor.altitude,
                 sog = processor.sog,
-                cog = processor.cog
+                cog = processor.cog,
+                pitch = processor.pitch,
+                roll = processor.roll
             )
         }
     }
@@ -285,10 +291,10 @@ object SessionManager {
         sb.appendLine("Session Name,Date,Duration,Distance,Average Speed")
         sb.appendLine("${session.name},${session.date},${session.duration},${session.distance},${session.averageSpeed}")
         sb.appendLine()
-        sb.appendLine("id,latitude,longitude,altitude,sog,cog,timestamp")
+        sb.appendLine("id,latitude,longitude,altitude,sog,cog,pitch,roll,timestamp")
 
         session.points.forEach { p ->
-            sb.appendLine("${p.id},${p.latitude},${p.longitude},${p.altitude},${p.sog},${p.cog},${p.timestamp}")
+            sb.appendLine("${p.id},${p.latitude},${p.longitude},${p.altitude},${p.sog},${p.cog},${p.pitch},${p.roll},${p.timestamp}")
         }
 
         file.writeText(sb.toString())

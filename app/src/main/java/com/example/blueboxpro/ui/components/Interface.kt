@@ -47,6 +47,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import com.example.blueboxpro.Option
 import com.example.blueboxpro.Process.MovementProcessor
 import com.example.blueboxpro.Process.MovementResult
+import com.example.blueboxpro.Process.UnitSystem
 import com.example.blueboxpro.R
 import com.example.blueboxpro.Save.GpsPoint
 import com.example.blueboxpro.Save.SessionManager
@@ -145,16 +146,16 @@ object MapComponents {
                 Spacer(modifier = Modifier.width(16.dp))
 
                 Column(modifier = Modifier.weight(1f).fillMaxHeight(), verticalArrangement = Arrangement.SpaceBetween) {
-                    // Coordinates Section (Right column in sketch)
+                    // Coordinates Section
                     Column(modifier = Modifier.padding(top = 16.dp)) {
                         CoordinateText("Latitude", LAT_LON_FORMAT.format(location?.latitude ?: 0.0))
                         CoordinateText("Altitude", "${STAT_FORMAT.format(result.getAltitude())} ${result.getAltitudeUnit()}")
                         CoordinateText("Longitude", LAT_LON_FORMAT.format(location?.longitude ?: 0.0))
                     }
 
-                    // Gauges Section (Bottom right in sketch: SOG, Pitch, Roll)
+                    // Gauges Section (SOG with Unit, Pitch, Roll)
                     Row(modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp), horizontalArrangement = Arrangement.SpaceEvenly) {
-                        CircularGauge("SOG", "${STAT_FORMAT.format(result.getSog())}", MaterialTheme.colorScheme.tertiary)
+                        CircularGauge("SOG", "${STAT_FORMAT.format(result.getSog())} ${result.getSpeedUnit()}", MaterialTheme.colorScheme.tertiary)
                         CircularGauge("PITCH", "${result.getPitch()}°", MaterialTheme.colorScheme.primary)
                         CircularGauge("ROLL", "${result.getRoll()}°", MaterialTheme.colorScheme.secondary)
                     }
@@ -189,7 +190,7 @@ object MapComponents {
                 Spacer(modifier = Modifier.height(16.dp))
 
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-                    CircularGauge("SOG", "${STAT_FORMAT.format(result.getSog())}")
+                    CircularGauge("SOG", "${STAT_FORMAT.format(result.getSog())} ${result.getSpeedUnit()}")
                     CircularGauge("PITCH", "${result.getPitch()}°", MaterialTheme.colorScheme.primary)
                     CircularGauge("ROLL", "${result.getRoll()}°", MaterialTheme.colorScheme.secondary)
                 }
@@ -209,10 +210,16 @@ object MapComponents {
     private fun CircularGauge(label: String, value: String, color: Color = MaterialTheme.colorScheme.onSurface) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Box(
-                modifier = Modifier.size(70.dp).border(2.dp, color, CircleShape),
+                modifier = Modifier.size(75.dp).border(2.dp, color, CircleShape),
                 contentAlignment = Alignment.Center
             ) {
-                Text(text = value, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold, color = color)
+                Text(
+                    text = value, 
+                    style = MaterialTheme.typography.bodySmall, 
+                    fontWeight = FontWeight.Bold, 
+                    color = color,
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                )
             }
             Text(text = label, style = MaterialTheme.typography.labelSmall, color = color)
         }
@@ -375,10 +382,25 @@ object MapComponents {
 
     @SuppressLint("ClickableViewAccessibility")
     @Composable
-    fun SessionMapContainer(points: List<GpsPoint>, modifier: Modifier = Modifier, selectedPointIndex: Int = -1, onPointTapped: (Int) -> Unit = {}) {
+    fun SessionMapContainer(
+        points: List<GpsPoint>, 
+        unitSystem: String = "METRIC_KMH",
+        modifier: Modifier = Modifier, 
+        selectedPointIndex: Int = -1, 
+        onPointTapped: (Int) -> Unit = {}
+    ) {
         if (points.isEmpty()) return
         val startLabel = stringResource(R.string.marker_start); val endLabel = stringResource(R.string.marker_end)
         val pointFormat = stringResource(R.string.marker_point_format); val snippetFormat = stringResource(R.string.marker_snippet_format)
+        
+        val unitSystemEnum = when (unitSystem) {
+            "METRIC_KMH" -> UnitSystem.METRIC_KMH
+            "METRIC_MS" -> UnitSystem.METRIC_MS
+            "IMPERIAL" -> UnitSystem.IMPERIAL
+            "NAUTICAL" -> UnitSystem.NAUTICAL
+            else -> UnitSystem.METRIC_KMH
+        }
+
         AndroidView(
             factory = { ctx -> MapView(ctx).apply { setTileSource(TileSourceFactory.MAPNIK); setMultiTouchControls(true); controller.setZoom(SESSION_MAP_ZOOM) } },
             update = { mapView ->
@@ -389,7 +411,26 @@ object MapComponents {
                 if (geoPoints.size > 1) mapView.overlays.add(Marker(mapView).apply { position = geoPoints.last(); setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM); title = endLabel })
                 if (selectedPointIndex in points.indices) {
                     val p = points[selectedPointIndex]
-                    val m = Marker(mapView).apply { position = GeoPoint(p.latitude, p.longitude); setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER); title = pointFormat.format(p.id); snippet = snippetFormat.format(p.sog * Option.Movement.MS_TO_KMH, "km/h", p.cog) }
+                    
+                    val convertedSog = when (unitSystemEnum) {
+                        UnitSystem.METRIC_KMH -> p.sog * 3.6f
+                        UnitSystem.METRIC_MS -> p.sog
+                        UnitSystem.IMPERIAL -> p.sog * 2.23694f
+                        UnitSystem.NAUTICAL -> p.sog * 1.94384f
+                    }
+                    val speedUnit = when (unitSystemEnum) {
+                        UnitSystem.METRIC_KMH -> "km/h"
+                        UnitSystem.METRIC_MS -> "m/s"
+                        UnitSystem.IMPERIAL -> "mph"
+                        UnitSystem.NAUTICAL -> "kn"
+                    }
+
+                    val m = Marker(mapView).apply { 
+                        position = GeoPoint(p.latitude, p.longitude)
+                        setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
+                        title = pointFormat.format(p.id)
+                        snippet = snippetFormat.format(convertedSog, speedUnit, p.cog) 
+                    }
                     mapView.overlays.add(m); m.showInfoWindow()
                 }
                 if (geoPoints.size >= 2) try { mapView.post { mapView.zoomToBoundingBox(BoundingBox.fromGeoPoints(geoPoints), true, BOUNDING_BOX_PADDING) } } catch (_: Exception) { mapView.controller.setCenter(geoPoints.first()) }

@@ -1,7 +1,6 @@
 /**
  * This page allows the user to configure general application settings,
  * such as theme, unit system, and language.
- * Changes are propagated back to the MainActivity via callbacks.
  */
 package com.example.blueboxpro.pages
 
@@ -18,11 +17,10 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import com.example.blueboxpro.R
+import com.example.blueboxpro.Process.MovementProcessor
 
 /**
  * The settings screen (Page 4).
- * 
- * Provides UI controls for global app preferences.
  * 
  * @param isDarkMode Whether the dark theme is currently enabled.
  * @param onDarkModeChange Callback to toggle dark mode.
@@ -40,9 +38,19 @@ fun SettingsPage(
     onUnitSystemChange: (String) -> Unit,
     language: String,
     onLanguageChange: (String) -> Unit,
-    onNavigateToAdvancedSettings: () -> Unit
+    onNavigateToAdvancedSettings: () -> Unit,
+    @Suppress("UNUSED_PARAMETER") processor: MovementProcessor? = null
 ) {
     val scrollState = rememberScrollState()
+    
+    // Mapping of internal keys to localized display strings to ensure selection works
+    val unitOptionsMap = mapOf(
+        "METRIC_KMH" to stringResource(R.string.unit_metric_kmh),
+        "METRIC_MS" to stringResource(R.string.unit_metric_ms),
+        "IMPERIAL" to stringResource(R.string.unit_imperial),
+        "NAUTICAL" to stringResource(R.string.unit_nautical)
+    )
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -69,33 +77,27 @@ fun SettingsPage(
             modifier = Modifier.padding(top = SPACING_MEDIUM, bottom = SPACING_SMALL)
         )
         
-        val unitOptions = listOf(
-            stringResource(R.string.unit_metric_kmh),
-            stringResource(R.string.unit_metric_ms),
-            stringResource(R.string.unit_imperial),
-            stringResource(R.string.unit_nautical)
-        )
-        
         Column(Modifier.selectableGroup()) {
-            unitOptions.forEach { text ->
+            unitOptionsMap.forEach { (key, label) ->
+                val isSelected = (key == unitSystem)
                 Row(
                     Modifier
                         .fillMaxWidth()
                         .height(OPTION_HEIGHT)
                         .selectable(
-                            selected = (text == unitSystem),
-                            onClick = { onUnitSystemChange(text) },
+                            selected = isSelected,
+                            onClick = { onUnitSystemChange(key) },
                             role = Role.RadioButton
                         )
                         .padding(horizontal = PADDING_MEDIUM),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     RadioButton(
-                        selected = (text == unitSystem),
+                        selected = isSelected,
                         onClick = null 
                     )
                     Text(
-                        text = text,
+                        text = label,
                         style = MaterialTheme.typography.bodyLarge,
                         modifier = Modifier.padding(start = PADDING_MEDIUM)
                     )

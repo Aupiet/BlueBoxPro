@@ -25,6 +25,7 @@ import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -71,9 +72,9 @@ class MainActivity : AppCompatActivity() {
 
         setContent {
             val context = LocalContext.current
-            var isDarkMode by remember { mutableStateOf(Option.UI.isDarkMode) }
-            var unitSystemKey by remember { mutableStateOf(Option.UI.unitSystem) }
-            var language by remember { mutableStateOf(Option.UI.language) }
+            var isDarkMode by rememberSaveable { mutableStateOf(Option.UI.isDarkMode) }
+            var unitSystemKey by rememberSaveable { mutableStateOf(Option.UI.unitSystem) }
+            var language by rememberSaveable { mutableStateOf(Option.UI.language) }
 
             val processor = remember { MovementProcessor() }
             var lastLocationState by remember { mutableStateOf<GeoPoint?>(null) }
@@ -114,10 +115,20 @@ class MainActivity : AppCompatActivity() {
                             unitSystem = unitSystemKey,
                             language = language,
                             isDarkMode = isDarkMode,
-                            onDarkModeChange = { isDarkMode = it; Option.UI.isDarkMode = it; Option.save(this@MainActivity) },
-                            onUnitSystemChange = { unitSystemKey = it; Option.UI.unitSystem = it; Option.save(this@MainActivity) },
+                            onDarkModeChange = { 
+                                isDarkMode = it
+                                Option.UI.isDarkMode = it
+                                Option.save(this@MainActivity) 
+                            },
+                            onUnitSystemChange = { newUnit ->
+                                unitSystemKey = newUnit
+                                Option.UI.unitSystem = newUnit
+                                Option.save(this@MainActivity) 
+                            },
                             onLanguageChange = { newLang ->
-                                language = newLang; Option.UI.language = newLang; Option.save(this@MainActivity)
+                                language = newLang
+                                Option.UI.language = newLang
+                                Option.save(this@MainActivity)
                                 val tag = if (newLang == Option.App.LANG_NAME_FR) Option.App.LANG_FR else Option.App.LANG_EN
                                 AppCompatDelegate.setApplicationLocales(LocaleListCompat.forLanguageTags(tag))
                             },
@@ -209,7 +220,7 @@ fun MainScreen(
                 0 -> Page1(processor, refreshTrigger, unitSystem, { onTabSelected(1) }, { onTabSelected(3) })
                 1 -> Page2(lastLocationState, processor, refreshTrigger, unitSystem, onOpenFullScreenMap)
                 2 -> Page3(processor, refreshTrigger, onNavigateToSessionDetail)
-                3 -> SettingsPage(isDarkMode, onDarkModeChange, unitSystem, onUnitSystemChange, language, onLanguageChange, onNavigateToAdvancedSettings)
+                3 -> SettingsPage(isDarkMode, onDarkModeChange, unitSystem, onUnitSystemChange, language, onLanguageChange, onNavigateToAdvancedSettings, processor)
             }
         }
     }
@@ -223,7 +234,6 @@ fun MainScreen(
                 pagerContent(innerPadding)
             }
 
-            // Navigation Rail on the RIGHT in landscape
             NavigationRail(
                 modifier = Modifier.fillMaxHeight(),
                 containerColor = MaterialTheme.colorScheme.surfaceVariant,

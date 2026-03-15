@@ -22,6 +22,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.blueboxpro.Option
+import com.example.blueboxpro.Process.MovementResult
+import com.example.blueboxpro.Process.UnitSystem
 import com.example.blueboxpro.R
 import com.example.blueboxpro.Save.GpsPoint
 import com.example.blueboxpro.Save.Session
@@ -42,11 +44,16 @@ import java.util.Locale
 
 /**
  * Detailed view for a specific session.
+ * 
+ * @param session The session to display.
+ * @param unitSystem Current unit system for conversion.
+ * @param onBack Callback for back navigation.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SessionDetailPage(
     session: Session?,
+    unitSystem: String = Option.UI.unitSystem,
     onBack: () -> Unit
 ) {
     val context = LocalContext.current
@@ -130,7 +137,7 @@ fun SessionDetailPage(
             Spacer(modifier = Modifier.height(SPACING_MEDIUM))
 
             if (points.isNotEmpty()) {
-                SpeedStatisticsCard(points)
+                SpeedStatisticsCard(points, unitSystem)
 
                 Spacer(modifier = Modifier.height(SPACING_MEDIUM))
 
@@ -143,6 +150,7 @@ fun SessionDetailPage(
                 ) {
                     MapComponents.SessionMapContainer(
                         points = points,
+                        unitSystem = unitSystem,
                         modifier = Modifier.fillMaxSize(),
                         selectedPointIndex = selectedPointIndex,
                         onPointTapped = { idx -> selectedPointIndex = idx }
@@ -151,18 +159,18 @@ fun SessionDetailPage(
 
                 if (selectedPointIndex in points.indices) {
                     Spacer(modifier = Modifier.height(SPACING_SMALL))
-                    SelectedPointCard(points[selectedPointIndex])
+                    SelectedPointCard(points[selectedPointIndex], unitSystem)
                 }
 
                 Spacer(modifier = Modifier.height(SPACING_MEDIUM))
 
                 SectionHeader(stringResource(R.string.header_speed_chart))
-                SpeedChart(points)
+                SpeedChart(points, unitSystem)
 
                 Spacer(modifier = Modifier.height(SPACING_MEDIUM))
 
                 SectionHeader(stringResource(R.string.header_altitude_chart))
-                AltitudeChart(points)
+                AltitudeChart(points, unitSystem)
 
                 Spacer(modifier = Modifier.height(SPACING_LARGE))
             } else {
@@ -200,11 +208,19 @@ private fun SessionInfoHeader(session: Session) {
 }
 
 @Composable
-private fun SpeedStatisticsCard(points: List<GpsPoint>) {
-    val sogValues = points.map { it.sog * Option.Movement.MS_TO_KMH }
-    val avgSpeed = sogValues.average().toFloat()
-    val maxSpeed = sogValues.maxOrNull() ?: 0f
-    val minSpeed = sogValues.minOrNull() ?: 0f
+private fun SpeedStatisticsCard(points: List<GpsPoint>, unitSystemStr: String) {
+    val resultTemplate = MovementResult(
+        unitSystem = getUnitSystem(unitSystemStr),
+        accelX = 0f, accelY = 0f, accelZ = 0f,
+        speedIMU = 0f, speedGPS = 0f, speedFused = 0f,
+        averageSpeed = 0f, sog = 0f, cog = 0f, azimuth = 0f, altitude = 0.0, accuracy = 0f, pitch = 0, roll = 0
+    )
+    
+    val speedValues = points.map { convertSpeed(it.sog, unitSystemStr) }
+    val avgSpeed = speedValues.average().toFloat()
+    val maxSpeed = speedValues.maxOrNull() ?: 0f
+    val minSpeed = speedValues.minOrNull() ?: 0f
+    val unit = resultTemplate.getSpeedUnit()
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -216,9 +232,9 @@ private fun SpeedStatisticsCard(points: List<GpsPoint>) {
                 .padding(PADDING_MEDIUM),
             horizontalArrangement = Arrangement.SpaceEvenly
         ) {
-            StatColumn(stringResource(R.string.stat_min), STAT_FORMAT.format(minSpeed), "km/h")
-            StatColumn(stringResource(R.string.stat_avg), STAT_FORMAT.format(avgSpeed), "km/h")
-            StatColumn(stringResource(R.string.stat_max), STAT_FORMAT.format(maxSpeed), "km/h")
+            StatColumn(stringResource(R.string.stat_min), STAT_FORMAT.format(minSpeed), unit)
+            StatColumn(stringResource(R.string.stat_avg), STAT_FORMAT.format(avgSpeed), unit)
+            StatColumn(stringResource(R.string.stat_max), STAT_FORMAT.format(maxSpeed), unit)
         }
     }
 }
@@ -246,8 +262,20 @@ private fun StatColumn(label: String, value: String, unit: String) {
 }
 
 @Composable
-private fun SelectedPointCard(point: GpsPoint) {
+private fun SelectedPointCard(point: GpsPoint, unitSystemStr: String) {
     val timeStr = SimpleDateFormat("HH:mm:ss", Locale.US).format(Date(point.timestamp))
+    val unitSystem = getUnitSystem(unitSystemStr)
+    
+    val convertedSog = convertSpeed(point.sog, unitSystemStr)
+    val speedUnit = when (unitSystem) {
+        UnitSystem.METRIC_KMH -> "km/h"
+        UnitSystem.METRIC_MS -> "m/s"
+        UnitSystem.IMPERIAL -> "mph"
+        UnitSystem.NAUTICAL -> "kn"
+    }
+    
+    val convertedAlt = if (unitSystem == UnitSystem.IMPERIAL) point.altitude * 3.28084 else point.altitude
+    val altUnit = if (unitSystem == UnitSystem.IMPERIAL) "ft" else "m"
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -266,7 +294,7 @@ private fun SelectedPointCard(point: GpsPoint) {
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(
-                    text = "SOG: ${STAT_FORMAT.format(point.sog * Option.Movement.MS_TO_KMH)} km/h",
+                    text = "SOG: ${STAT_FORMAT.format(convertedSog)} $speedUnit",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onTertiaryContainer
                 )
@@ -276,8 +304,23 @@ private fun SelectedPointCard(point: GpsPoint) {
                     color = MaterialTheme.colorScheme.onTertiaryContainer
                 )
                 Text(
-                    text = "Alt: ${STAT_FORMAT.format(point.altitude)} m",
+                    text = "Alt: ${STAT_FORMAT.format(convertedAlt)} $altUnit",
                     style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onTertiaryContainer
+                )
+            }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    text = "Pitch: ${point.pitch}°",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onTertiaryContainer
+                )
+                Text(
+                    text = "Roll: ${point.roll}°",
+                    style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onTertiaryContainer
                 )
             }
@@ -302,17 +345,17 @@ private fun SectionHeader(title: String) {
  * Line chart visualizing Speed Over Ground (SOG) relative to session duration.
  */
 @Composable
-private fun SpeedChart(points: List<GpsPoint>) {
+private fun SpeedChart(points: List<GpsPoint>, unitSystemStr: String) {
     if (points.size < 2) return
 
     val modelProducer = remember { CartesianChartModelProducer() }
     val startTime = points.first().timestamp
 
-    LaunchedEffect(points) {
+    LaunchedEffect(points, unitSystemStr) {
         modelProducer.runTransaction {
             lineSeries {
                 val xValues = points.map { (it.timestamp - startTime).toDouble() / 1000.0 }
-                val yValues = points.map { it.sog.toDouble() * Option.Movement.MS_TO_KMH }
+                val yValues = points.map { convertSpeed(it.sog, unitSystemStr).toDouble() }
                 series(x = xValues, y = yValues)
             }
         }
@@ -337,17 +380,20 @@ private fun SpeedChart(points: List<GpsPoint>) {
  * Line chart visualizing Altitude relative to session duration.
  */
 @Composable
-private fun AltitudeChart(points: List<GpsPoint>) {
+private fun AltitudeChart(points: List<GpsPoint>, unitSystemStr: String) {
     if (points.size < 2) return
 
     val modelProducer = remember { CartesianChartModelProducer() }
     val startTime = points.first().timestamp
+    val isImperial = getUnitSystem(unitSystemStr) == UnitSystem.IMPERIAL
 
-    LaunchedEffect(points) {
+    LaunchedEffect(points, unitSystemStr) {
         modelProducer.runTransaction {
             lineSeries {
                 val xValues = points.map { (it.timestamp - startTime).toDouble() / 1000.0 }
-                val yValues = points.map { it.altitude }
+                val yValues = points.map { 
+                    if (isImperial) it.altitude * 3.28084 else it.altitude
+                }
                 series(x = xValues, y = yValues)
             }
         }
@@ -366,6 +412,25 @@ private fun AltitudeChart(points: List<GpsPoint>) {
             .fillMaxWidth()
             .height(CHART_HEIGHT)
     )
+}
+
+private fun convertSpeed(speedMs: Float, unitSystemStr: String): Float {
+    return when (getUnitSystem(unitSystemStr)) {
+        UnitSystem.METRIC_KMH -> speedMs * 3.6f
+        UnitSystem.METRIC_MS -> speedMs
+        UnitSystem.IMPERIAL -> speedMs * 2.23694f
+        UnitSystem.NAUTICAL -> speedMs * 1.94384f
+    }
+}
+
+private fun getUnitSystem(unitSystemStr: String): UnitSystem {
+    return when (unitSystemStr) {
+        "METRIC_KMH" -> UnitSystem.METRIC_KMH
+        "METRIC_MS" -> UnitSystem.METRIC_MS
+        "IMPERIAL" -> UnitSystem.IMPERIAL
+        "NAUTICAL" -> UnitSystem.NAUTICAL
+        else -> UnitSystem.METRIC_KMH
+    }
 }
 
 /**
