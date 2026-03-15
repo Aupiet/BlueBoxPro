@@ -49,6 +49,10 @@ class MovementProcessor {
     var azimuth: Float = 0f
     private var averageAzimuth: Float = 0f
 
+    //angles
+    var pitch: Int = 0
+    var roll: Int = 0
+
     /**
      * Captures the current state of movement into a immutable MovementResult object.
      * Use this to get a snapshot of data formatted for a specific unit system.
@@ -77,7 +81,9 @@ class MovementProcessor {
             cog = cog,
             azimuth = azimuth,
             altitude = altitude,
-            accuracy = gpsAccuracy
+            accuracy = gpsAccuracy,
+            pitch = this.pitch,
+            roll = this.roll
         )
     }
 

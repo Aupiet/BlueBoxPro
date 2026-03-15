@@ -1,5 +1,6 @@
 /**
  * This page manages session recordings and displays the history of saved sessions.
+ * It provides UI for starting, stopping, and sharing tracking sessions.
  */
 package com.example.blueboxpro.pages
 
@@ -27,6 +28,13 @@ import com.example.blueboxpro.Save.Recording
 import com.example.blueboxpro.Save.Session
 import com.example.blueboxpro.Process.MovementProcessor
 
+/**
+ * The recording and history page (Page 3).
+ * 
+ * @param processor The movement processor instance.
+ * @param refreshTrigger Trigger to force recomposition.
+ * @param onSessionClick Callback when a session is selected.
+ */
 @Composable
 fun Page3(
     processor: MovementProcessor,
@@ -52,7 +60,7 @@ fun Page3(
         ) {
             Column(
                 modifier = Modifier
-                    .weight(1f)
+                    .weight(REC_WEIGHT_HALF)
                     .fillMaxHeight()
                     .padding(end = REC_PADDING_MEDIUM),
                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -77,7 +85,7 @@ fun Page3(
 
             Column(
                 modifier = Modifier
-                    .weight(1f)
+                    .weight(REC_WEIGHT_HALF)
                     .fillMaxHeight()
                     .verticalScroll(historyScrollState),
                 horizontalAlignment = Alignment.Start
@@ -111,7 +119,7 @@ fun Page3(
 
             Column(
                 modifier = Modifier
-                    .weight(1f)
+                    .weight(REC_WEIGHT_HALF)
                     .verticalScroll(historyScrollState)
                     .padding(horizontal = REC_PADDING_MEDIUM),
                 horizontalAlignment = Alignment.Start
@@ -137,6 +145,9 @@ fun Page3(
     }
 }
 
+/**
+ * Card containing controls for starting and stopping a recording.
+ */
 @Composable
 private fun RecordingControlCard(
     isRecording: Boolean,
@@ -167,7 +178,7 @@ private fun RecordingControlCard(
                 )
             }
 
-            Spacer(modifier = Modifier.weight(1f))
+            Spacer(modifier = Modifier.weight(REC_WEIGHT_HALF))
             
             Button(
                 onClick = {
@@ -193,6 +204,9 @@ private fun RecordingControlCard(
     }
 }
 
+/**
+ * List displaying previous tracking sessions.
+ */
 @Composable
 private fun HistorySection(
     sessions: List<Session>,
@@ -245,3 +259,4 @@ private val REC_SPACING_LARGE = 24.dp
 private val REC_EMPTY_PADDING = 40.dp
 private val REC_CARD_WIDTH = 300.dp
 private val REC_CARD_HEIGHT = 180.dp
+private const val REC_WEIGHT_HALF = 1f

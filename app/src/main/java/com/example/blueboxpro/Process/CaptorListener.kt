@@ -32,20 +32,24 @@ class CaptorListener(
         private const val LOCATION_INTERVAL_MS = 1000L
         private const val ROTATION_MATRIX_SIZE = 9
         private const val ORIENTATION_ARRAY_SIZE = 3
+        private const val SENSOR_AXIS_COUNT = 3
     }
 
     private val sensorManager = context.getSystemService(Context.SENSOR_SERVICE) as SensorManager
     private val fusedLocationClient = LocationServices.getFusedLocationProviderClient(context)
     private var lastTimestamp = 0L
 
-    private val gravityData = FloatArray(3)
-    private val geomagneticData = FloatArray(3)
+    private val gravityData = FloatArray(SENSOR_AXIS_COUNT)
+    private val geomagneticData = FloatArray(SENSOR_AXIS_COUNT)
     private var hasGravity = false
     private var hasGeomagnetic = false
     private val rotationMatrix = FloatArray(ROTATION_MATRIX_SIZE)
     private var hasRotationMatrix = false
 
     private val sensorEventListener = object : SensorEventListener {
+        /**
+         * Dispatches sensor events to the appropriate processing methods.
+         */
         override fun onSensorChanged(event: SensorEvent?) {
             when (event?.sensor?.type) {
                 Sensor.TYPE_LINEAR_ACCELERATION -> {
@@ -62,14 +66,16 @@ class CaptorListener(
                     onDataUpdated()
                 }
                 Sensor.TYPE_ACCELEROMETER -> {
-                    System.arraycopy(event.values, 0, gravityData, 0, 3)
+                    System.arraycopy(event.values, 0, gravityData, 0, SENSOR_AXIS_COUNT)
                     hasGravity = true
                     updateCompass()
+                    updateAttitude()
                 }
                 Sensor.TYPE_MAGNETIC_FIELD -> {
-                    System.arraycopy(event.values, 0, geomagneticData, 0, 3)
+                    System.arraycopy(event.values, 0, geomagneticData, 0, SENSOR_AXIS_COUNT)
                     hasGeomagnetic = true
                     updateCompass()
+                    updateAttitude()
                 }
             }
         }
@@ -95,7 +101,22 @@ class CaptorListener(
         }
     }
 
+    /**
+     * Calculates pitch and roll and updates the processor.
+     */
+    private fun updateAttitude() {
+        if (hasGravity && hasGeomagnetic) {
+            RollpitchCalculator.calculatePitchRoll(gravityData, geomagneticData)?.let { (p, r) ->
+                processor.pitch = p
+                processor.roll = r
+            }
+        }
+    }
+
     private val locationCallback = object : LocationCallback() {
+        /**
+         * Receives new GPS locations and updates the processor.
+         */
         override fun onLocationResult(locationResult: LocationResult) {
             locationResult.lastLocation?.let { loc ->
                 processor.updateWithGPS(

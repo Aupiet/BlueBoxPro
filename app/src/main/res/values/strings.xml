@@ -21,7 +21,7 @@
     <string name="advanced_settings">Advanced Settings</string>
     <string name="version_pre_alpha">Version Pre Alpha</string>
 
-    <!-- Page 1 (Movement Analysis) -->
+    <!-- Page 1 (Movement Analysis / Home) -->
     <string name="movement_analysis_title">Movement Analysis</string>
     <string name="sog_label">SOG (Speed Over Ground)</string>
     <string name="cog_label">COG (Course Over Ground)</string>
@@ -31,6 +31,9 @@
     <string name="gps_label" translatable="false">GPS:</string>
     <string name="imu_label" translatable="false">IMU:</string>
     <string name="reset_button">Reset</string>
+    <string name="last_session_header">Last Session</string>
+    <string name="recording_in_progress">Recording in Progress</string>
+    <string name="start_new_session_label">Start a New Session</string>
 
     <!-- Page 2 (Map/Navigation) -->
     <string name="map_title">Map Navigation</string>

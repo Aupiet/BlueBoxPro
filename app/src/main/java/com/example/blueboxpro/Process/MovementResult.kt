@@ -45,7 +45,9 @@ class MovementResult(
     private val cog: Float,
     private val azimuth: Float,
     private val altitude: Double,
-    private val accuracy: Float
+    private val accuracy: Float,
+    private val  pitch: Int,
+    private val roll: Int
 ) {
     /** 
      * Rounds a float to a specified number of decimals based on the global rounding factor.
@@ -93,7 +95,11 @@ class MovementResult(
         UnitSystem.METRIC_KMH, UnitSystem.METRIC_MS, UnitSystem.NAUTICAL -> altitude
         UnitSystem.IMPERIAL -> altitude * Option.Movement.METERS_TO_FEET
     }
+    /** Returns the Pitch in degrees. */
+    fun getPitch(): Int = pitch
 
+    /** Returns the Roll in degrees. */
+    fun getRoll(): Int = roll
     /** 
      * Returns the unit label for altitude.
      */

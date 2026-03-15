@@ -1,9 +1,11 @@
 /**
  * Main entry point of the BlueBoxPro application.
+ * This activity sets up the navigation, theme, and global sensor listeners.
  */
 package com.example.blueboxpro
 
 import android.Manifest
+import android.content.res.Configuration as AndroidConfiguration
 import android.os.Bundle
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
@@ -11,20 +13,24 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -52,6 +58,7 @@ class MainActivity : AppCompatActivity() {
         private const val ROUTE_SESSION_DETAIL_BASE = "session_detail"
         private const val ARG_SESSION_ID = "sessionId"
         private const val ROUTE_SESSION_DETAIL = "$ROUTE_SESSION_DETAIL_BASE/{$ARG_SESSION_ID}"
+        private const val INITIAL_REFRESH_TRIGGER = 0
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -70,7 +77,7 @@ class MainActivity : AppCompatActivity() {
 
             val processor = remember { MovementProcessor() }
             var lastLocationState by remember { mutableStateOf<GeoPoint?>(null) }
-            var refreshTrigger by remember { mutableStateOf(0) }
+            var refreshTrigger by remember { mutableStateOf(INITIAL_REFRESH_TRIGGER) }
 
             val captorListener = remember {
                 CaptorListener(context, processor) {
@@ -160,35 +167,138 @@ fun MainScreen(
     onNavigateToAdvancedSettings: () -> Unit,
     onNavigateToSessionDetail: (Int) -> Unit
 ) {
-    val pagerState = rememberPagerState(pageCount = { 4 })
+    val configuration = LocalConfiguration.current
+    val isLandscape = configuration.orientation == AndroidConfiguration.ORIENTATION_LANDSCAPE
+    val pagerState = rememberPagerState(pageCount = { MainScreenConstants.PAGE_COUNT })
     val scope = rememberCoroutineScope()
-    val tabs = listOf(TabItem(Icons.Default.Home, R.string.tab_home), TabItem(Icons.Default.LocationOn, R.string.tab_map), TabItem(Icons.Default.PlayArrow, R.string.tab_sessions), TabItem(Icons.Default.Settings, R.string.tab_settings))
+    val isRecording = SessionManager.activeRecording != null
+    
+    val tabs = listOf(
+        TabItem(Icons.Default.Home, R.string.tab_home), 
+        TabItem(Icons.Default.LocationOn, R.string.tab_map), 
+        TabItem(Icons.Default.PlayArrow, R.string.tab_sessions), 
+        TabItem(Icons.Default.Settings, R.string.tab_settings)
+    )
 
-    Scaffold(
-        modifier = Modifier.fillMaxSize(),
-        topBar = { TopAppBar(title = { Text(stringResource(tabs[pagerState.currentPage].labelRes)) }) },
-        bottomBar = {
-            NavigationBar {
-                tabs.forEachIndexed { index, tab ->
-                    NavigationBarItem(
-                        selected = pagerState.currentPage == index,
-                        onClick = { scope.launch { pagerState.animateScrollToPage(index) } },
-                        icon = { Icon(tab.icon, contentDescription = stringResource(tab.labelRes), modifier = Modifier.size(28.dp)) },
-                        label = { Text(stringResource(tab.labelRes)) }
+    val onTabSelected: (Int) -> Unit = { index ->
+        scope.launch { pagerState.animateScrollToPage(index) }
+    }
+
+    val topBar = @Composable {
+        TopAppBar(
+            title = { 
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Default.Info, 
+                        contentDescription = "Logo",
+                        modifier = Modifier.size(24.dp).padding(end = 8.dp)
                     )
+                    Text(stringResource(tabs[pagerState.currentPage].labelRes)) 
                 }
             }
-        }
-    ) { innerPadding ->
-        HorizontalPager(state = pagerState, modifier = Modifier.padding(innerPadding).fillMaxSize()) { pageIndex ->
+        )
+    }
+
+    val pagerContent = @Composable { padding: PaddingValues ->
+        HorizontalPager(
+            state = pagerState, 
+            modifier = Modifier.padding(padding).fillMaxSize(),
+            userScrollEnabled = false
+        ) { pageIndex ->
             when (pageIndex) {
-                0 -> Page1(processor, refreshTrigger, unitSystem, { scope.launch { pagerState.animateScrollToPage(1) } }, { scope.launch { pagerState.animateScrollToPage(3) } })
+                0 -> Page1(processor, refreshTrigger, unitSystem, { onTabSelected(1) }, { onTabSelected(3) })
                 1 -> Page2(lastLocationState, processor, refreshTrigger, unitSystem, onOpenFullScreenMap)
                 2 -> Page3(processor, refreshTrigger, onNavigateToSessionDetail)
                 3 -> SettingsPage(isDarkMode, onDarkModeChange, unitSystem, onUnitSystemChange, language, onLanguageChange, onNavigateToAdvancedSettings)
             }
         }
     }
+
+    if (isLandscape) {
+        Row(modifier = Modifier.fillMaxSize().systemBarsPadding()) {
+            Scaffold(
+                modifier = Modifier.weight(1f),
+                topBar = topBar
+            ) { innerPadding ->
+                pagerContent(innerPadding)
+            }
+
+            // Navigation Rail on the RIGHT in landscape
+            NavigationRail(
+                modifier = Modifier.fillMaxHeight(),
+                containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                header = {
+                    Icon(
+                        imageVector = Icons.Default.Info,
+                        contentDescription = "Logo",
+                        modifier = Modifier.size(MainScreenConstants.LOGO_SIZE.dp).padding(vertical = 16.dp),
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                }
+            ) {
+                tabs.forEachIndexed { index, tab ->
+                    val isSessionTab = index == MainScreenConstants.SESSION_TAB_INDEX
+                    NavigationRailItem(
+                        selected = pagerState.currentPage == index,
+                        onClick = { onTabSelected(index) },
+                        icon = { 
+                            if (isSessionTab && isRecording) {
+                                Surface(
+                                    modifier = Modifier
+                                        .size(MainScreenConstants.ICON_SIZE_ACTIVE.dp)
+                                        .clip(RoundedCornerShape(MainScreenConstants.ICON_CORNER_RADIUS.dp)),
+                                    color = Color.Red
+                                ) { }
+                            } else {
+                                Icon(tab.icon, contentDescription = stringResource(tab.labelRes), modifier = Modifier.size(MainScreenConstants.ICON_SIZE_DEFAULT.dp))
+                            }
+                        },
+                        label = { Text(stringResource(tab.labelRes)) }
+                    )
+                }
+            }
+        }
+    } else {
+        Scaffold(
+            modifier = Modifier.fillMaxSize(),
+            topBar = topBar,
+            bottomBar = {
+                NavigationBar {
+                    tabs.forEachIndexed { index, tab ->
+                        val isSessionTab = index == MainScreenConstants.SESSION_TAB_INDEX
+                        NavigationBarItem(
+                            selected = pagerState.currentPage == index,
+                            onClick = { onTabSelected(index) },
+                            icon = { 
+                                if (isSessionTab && isRecording) {
+                                    Surface(
+                                        modifier = Modifier
+                                            .size(MainScreenConstants.ICON_SIZE_ACTIVE.dp)
+                                            .clip(RoundedCornerShape(MainScreenConstants.ICON_CORNER_RADIUS.dp)),
+                                        color = Color.Red
+                                    ) { }
+                                } else {
+                                    Icon(tab.icon, contentDescription = stringResource(tab.labelRes), modifier = Modifier.size(MainScreenConstants.ICON_SIZE_DEFAULT.dp))
+                                }
+                            },
+                            label = { Text(stringResource(tab.labelRes)) }
+                        )
+                    }
+                }
+            }
+        ) { innerPadding ->
+            pagerContent(innerPadding)
+        }
+    }
+}
+
+private object MainScreenConstants {
+    const val PAGE_COUNT = 4
+    const val SESSION_TAB_INDEX = 2
+    const val ICON_SIZE_ACTIVE = 24
+    const val ICON_SIZE_DEFAULT = 28
+    const val ICON_CORNER_RADIUS = 4
+    const val LOGO_SIZE = 40
 }
 
 data class TabItem(val icon: ImageVector, val labelRes: Int)
