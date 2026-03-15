@@ -7,6 +7,7 @@ package com.example.blueboxpro.pages
 import android.annotation.SuppressLint
 import androidx.compose.runtime.Composable
 import com.example.blueboxpro.Process.MovementProcessor
+import com.example.blueboxpro.Process.WeatherData
 import com.example.blueboxpro.ui.components.MapComponents
 import org.osmdroid.util.GeoPoint
 
@@ -19,6 +20,7 @@ import org.osmdroid.util.GeoPoint
  * @param processor Movement processor providing live speed and orientation data.
  * @param refreshTrigger Trigger to force UI updates when data changes.
  * @param unitSystem The unit system currently in use.
+ * @param weatherData Weather data for wind display.
  * @param onOpenFullScreenMap Callback to navigate to the full screen map view.
  */
 @SuppressLint("MissingPermission")
@@ -28,12 +30,14 @@ fun Page2(
     processor: MovementProcessor,
     refreshTrigger: Int,
     unitSystem: String,
+    weatherData: WeatherData? = null,
     onOpenFullScreenMap: () -> Unit
 ) {
     MapComponents.Page2Layout(
         location = location,
         processor = processor,
         unitSystem = unitSystem,
+        weatherData = weatherData,
         onBack = {},
         onMapClick = onOpenFullScreenMap
     )

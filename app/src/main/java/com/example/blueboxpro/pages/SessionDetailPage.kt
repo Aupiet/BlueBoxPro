@@ -22,8 +22,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.blueboxpro.Option
+import com.example.blueboxpro.Process.Converter
 import com.example.blueboxpro.Process.MovementResult
-import com.example.blueboxpro.Process.UnitSystem
 import com.example.blueboxpro.R
 import com.example.blueboxpro.Save.GpsPoint
 import com.example.blueboxpro.Save.Session
@@ -209,14 +209,15 @@ private fun SessionInfoHeader(session: Session) {
 
 @Composable
 private fun SpeedStatisticsCard(points: List<GpsPoint>, unitSystemStr: String) {
+    val unitSystem = Converter.getUnitSystem(unitSystemStr)
     val resultTemplate = MovementResult(
-        unitSystem = getUnitSystem(unitSystemStr),
+        unitSystem = unitSystem,
         accelX = 0f, accelY = 0f, accelZ = 0f,
         speedIMU = 0f, speedGPS = 0f, speedFused = 0f,
         averageSpeed = 0f, sog = 0f, cog = 0f, azimuth = 0f, altitude = 0.0, accuracy = 0f, pitch = 0, roll = 0
     )
     
-    val speedValues = points.map { convertSpeed(it.sog, unitSystemStr) }
+    val speedValues = points.map { Converter.convertSpeed(it.sog, unitSystem) }
     val avgSpeed = speedValues.average().toFloat()
     val maxSpeed = speedValues.maxOrNull() ?: 0f
     val minSpeed = speedValues.minOrNull() ?: 0f
@@ -264,18 +265,20 @@ private fun StatColumn(label: String, value: String, unit: String) {
 @Composable
 private fun SelectedPointCard(point: GpsPoint, unitSystemStr: String) {
     val timeStr = SimpleDateFormat("HH:mm:ss", Locale.US).format(Date(point.timestamp))
-    val unitSystem = getUnitSystem(unitSystemStr)
+    val unitSystem = Converter.getUnitSystem(unitSystemStr)
     
-    val convertedSog = convertSpeed(point.sog, unitSystemStr)
-    val speedUnit = when (unitSystem) {
-        UnitSystem.METRIC_KMH -> "km/h"
-        UnitSystem.METRIC_MS -> "m/s"
-        UnitSystem.IMPERIAL -> "mph"
-        UnitSystem.NAUTICAL -> "kn"
-    }
+    val convertedSog = Converter.convertSpeed(point.sog, unitSystem)
     
-    val convertedAlt = if (unitSystem == UnitSystem.IMPERIAL) point.altitude * 3.28084 else point.altitude
-    val altUnit = if (unitSystem == UnitSystem.IMPERIAL) "ft" else "m"
+    val resultTemplate = MovementResult(
+        unitSystem = unitSystem,
+        accelX = 0f, accelY = 0f, accelZ = 0f,
+        speedIMU = 0f, speedGPS = 0f, speedFused = 0f,
+        averageSpeed = 0f, sog = point.sog, cog = point.cog, azimuth = 0f, altitude = point.altitude, accuracy = 0f, pitch = point.pitch, roll = point.roll
+    )
+    
+    val speedUnit = resultTemplate.getSpeedUnit()
+    val convertedAlt = resultTemplate.getAltitude()
+    val altUnit = resultTemplate.getAltitudeUnit()
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -350,12 +353,13 @@ private fun SpeedChart(points: List<GpsPoint>, unitSystemStr: String) {
 
     val modelProducer = remember { CartesianChartModelProducer() }
     val startTime = points.first().timestamp
+    val unitSystem = Converter.getUnitSystem(unitSystemStr)
 
     LaunchedEffect(points, unitSystemStr) {
         modelProducer.runTransaction {
             lineSeries {
                 val xValues = points.map { (it.timestamp - startTime).toDouble() / 1000.0 }
-                val yValues = points.map { convertSpeed(it.sog, unitSystemStr).toDouble() }
+                val yValues = points.map { Converter.convertSpeed(it.sog, unitSystem).toDouble() }
                 series(x = xValues, y = yValues)
             }
         }
@@ -385,14 +389,14 @@ private fun AltitudeChart(points: List<GpsPoint>, unitSystemStr: String) {
 
     val modelProducer = remember { CartesianChartModelProducer() }
     val startTime = points.first().timestamp
-    val isImperial = getUnitSystem(unitSystemStr) == UnitSystem.IMPERIAL
+    val unitSystem = Converter.getUnitSystem(unitSystemStr)
 
     LaunchedEffect(points, unitSystemStr) {
         modelProducer.runTransaction {
             lineSeries {
                 val xValues = points.map { (it.timestamp - startTime).toDouble() / 1000.0 }
                 val yValues = points.map { 
-                    if (isImperial) it.altitude * 3.28084 else it.altitude
+                    Converter.convertAlt(it.altitude, unitSystem)
                 }
                 series(x = xValues, y = yValues)
             }
@@ -412,25 +416,6 @@ private fun AltitudeChart(points: List<GpsPoint>, unitSystemStr: String) {
             .fillMaxWidth()
             .height(CHART_HEIGHT)
     )
-}
-
-private fun convertSpeed(speedMs: Float, unitSystemStr: String): Float {
-    return when (getUnitSystem(unitSystemStr)) {
-        UnitSystem.METRIC_KMH -> speedMs * 3.6f
-        UnitSystem.METRIC_MS -> speedMs
-        UnitSystem.IMPERIAL -> speedMs * 2.23694f
-        UnitSystem.NAUTICAL -> speedMs * 1.94384f
-    }
-}
-
-private fun getUnitSystem(unitSystemStr: String): UnitSystem {
-    return when (unitSystemStr) {
-        "METRIC_KMH" -> UnitSystem.METRIC_KMH
-        "METRIC_MS" -> UnitSystem.METRIC_MS
-        "IMPERIAL" -> UnitSystem.IMPERIAL
-        "NAUTICAL" -> UnitSystem.NAUTICAL
-        else -> UnitSystem.METRIC_KMH
-    }
 }
 
 /**

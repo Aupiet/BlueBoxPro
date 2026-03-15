@@ -61,22 +61,8 @@ class MovementProcessor {
      * @return A MovementResult containing converted values.
      */
     fun getResult(unitSystemStr: String): MovementResult {
-        val unitSystem = when (unitSystemStr) {
-            "METRIC_KMH" -> UnitSystem.METRIC_KMH
-            "METRIC_MS" -> UnitSystem.METRIC_MS
-            "IMPERIAL" -> UnitSystem.IMPERIAL
-            "NAUTICAL" -> UnitSystem.NAUTICAL
-            else -> {
-                // Compatibility fallback for localized strings or legacy values
-                when {
-                    unitSystemStr.contains("km/h") -> UnitSystem.METRIC_KMH
-                    unitSystemStr.contains("m/s") -> UnitSystem.METRIC_MS
-                    unitSystemStr.contains("Imperial") || unitSystemStr.contains("Impérial") -> UnitSystem.IMPERIAL
-                    unitSystemStr.contains("Nautical") || unitSystemStr.contains("Nautique") -> UnitSystem.NAUTICAL
-                    else -> UnitSystem.METRIC_KMH
-                }
-            }
-        }
+        val unitSystem = Converter.getUnitSystem(unitSystemStr)
+        
         return MovementResult(
             unitSystem = unitSystem,
             accelX = accelX,

@@ -44,6 +44,8 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.example.blueboxpro.Process.CaptorListener
 import com.example.blueboxpro.Process.MovementProcessor
+import com.example.blueboxpro.Process.WeatherData
+import com.example.blueboxpro.Process.WeatherManager
 import com.example.blueboxpro.Save.SessionManager
 import com.example.blueboxpro.pages.*
 import com.example.blueboxpro.ui.theme.BlueBoxProTheme
@@ -79,6 +81,9 @@ class MainActivity : AppCompatActivity() {
             val processor = remember { MovementProcessor() }
             var lastLocationState by remember { mutableStateOf<GeoPoint?>(null) }
             var refreshTrigger by remember { mutableStateOf(INITIAL_REFRESH_TRIGGER) }
+            
+            // Global Weather State
+            var weatherData by remember { mutableStateOf<WeatherData?>(null) }
 
             val captorListener = remember {
                 CaptorListener(context, processor) {
@@ -89,6 +94,15 @@ class MainActivity : AppCompatActivity() {
 
             LaunchedEffect(refreshTrigger) {
                 SessionManager.updateRecording(processor)
+            }
+            
+            // Fetch weather when location changes
+            LaunchedEffect(lastLocationState) {
+                lastLocationState?.let { geoPoint ->
+                    if (weatherData == null) { // Fetch once or update occasionally
+                        weatherData = WeatherManager.fetchWeather(geoPoint.latitude, geoPoint.longitude)
+                    }
+                }
             }
 
             DisposableEffect(Unit) {
@@ -111,6 +125,7 @@ class MainActivity : AppCompatActivity() {
                         MainScreen(
                             processor = processor,
                             lastLocationState = lastLocationState,
+                            weatherData = weatherData,
                             refreshTrigger = refreshTrigger,
                             unitSystem = unitSystemKey,
                             language = language,
@@ -141,6 +156,7 @@ class MainActivity : AppCompatActivity() {
                         Page4(
                             location = lastLocationState,
                             processor = processor,
+                            weatherData = weatherData,
                             unitSystem = unitSystemKey,
                             onBack = { rootNavController.popBackStack() }
                         )
@@ -167,6 +183,7 @@ class MainActivity : AppCompatActivity() {
 fun MainScreen(
     processor: MovementProcessor,
     lastLocationState: GeoPoint?,
+    weatherData: WeatherData?,
     refreshTrigger: Int,
     unitSystem: String,
     language: String,
@@ -217,8 +234,8 @@ fun MainScreen(
             userScrollEnabled = false
         ) { pageIndex ->
             when (pageIndex) {
-                0 -> Page1(processor, refreshTrigger, unitSystem, { onTabSelected(1) }, { onTabSelected(3) })
-                1 -> Page2(lastLocationState, processor, refreshTrigger, unitSystem, onOpenFullScreenMap)
+                0 -> Page1(processor, refreshTrigger, unitSystem, weatherData, { onTabSelected(1) }, { onTabSelected(3) })
+                1 -> Page2(lastLocationState, processor, refreshTrigger, unitSystem, weatherData, onOpenFullScreenMap)
                 2 -> Page3(processor, refreshTrigger, onNavigateToSessionDetail)
                 3 -> SettingsPage(isDarkMode, onDarkModeChange, unitSystem, onUnitSystemChange, language, onLanguageChange, onNavigateToAdvancedSettings, processor)
             }
