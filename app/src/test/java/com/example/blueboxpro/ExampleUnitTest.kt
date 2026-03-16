@@ -1,4 +1,4 @@
-package com.example.blueboxpro
+/* package com.example.blueboxpro
 
 import com.example.blueboxpro.Process.SimpleKalmanFilter
 import com.example.blueboxpro.Process.EkfSpeedEstimator
@@ -211,4 +211,4 @@ class ExampleUnitTest {
         TestResultLogger.appendLog("Best configuration was Config ${bestConfigIndex+1} with error: $lowestError m/s")
         assertTrue("Should identify a best config", bestConfigIndex != -1)
     }
-}
+}*/

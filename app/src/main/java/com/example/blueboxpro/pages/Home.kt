@@ -22,7 +22,9 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.example.blueboxpro.Process.Converter
+import com.example.blueboxpro.ui.components.MapComponents
 import com.example.blueboxpro.Process.MovementProcessor
 import com.example.blueboxpro.Process.WeatherData
 import com.example.blueboxpro.Process.WeatherManager
@@ -157,24 +159,18 @@ private fun WindInfoCard(
 
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(text = "DIRECTION", style = MaterialTheme.typography.labelSmall)
-                    Box(contentAlignment = Alignment.Center, modifier = Modifier.size(if (isLandscape) 40.dp else 50.dp)) {
-                        Canvas(modifier = Modifier.fillMaxSize()) {
-                            val radius = size.minDimension / 2
-                            drawCircle(color = Color.Gray.copy(alpha = 0.3f), style = androidx.compose.ui.graphics.drawscope.Stroke(width = 2.dp.toPx()))
-                            
-                            val angleRad = Math.toRadians(windDir - 90.0)
-                            val dotRadius = 4.dp.toPx()
-                            val dotX = (size.width / 2) + (radius) * cos(angleRad).toFloat()
-                            val dotY = (size.height / 2) + (radius) * sin(angleRad).toFloat()
-                            
-                            drawCircle(
-                                color = Color.Red,
-                                radius = dotRadius,
-                                center = Offset(dotX, dotY)
-                            )
-                        }
-                    }
-                    Text(text = "%.0f°".format(windDir), style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold)
+                    
+                    val dirPoints = listOf(MapComponents.DirectionPoint(angle = windDir.toFloat(), sizeDp = 4f))
+                    MapComponents.CircularGaugeWithDirectionPoint(
+                        label = "",
+                        value = "%.0f°".format(windDir),
+                        points = dirPoints,
+                        gaugeSize = if (isLandscape) 40 else 50,
+                        color = MaterialTheme.colorScheme.onTertiaryContainer,
+                        labelFontSize = 0.sp,
+                        valueFontSize = 12.sp,
+                        circleStrokeWidth = 2f
+                    )
                 }
             }
         } else {

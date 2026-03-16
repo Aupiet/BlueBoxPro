@@ -104,10 +104,16 @@ fun Page4(
                     val windSpeedKmh = weatherData.currentWeather.windSpeed.toFloat()
                     val convertedWindSpeed = Converter.convertSpeed(windSpeedKmh / 3.6f, unitSystemEnum)
                     
-                    WeatherChipWithDirection(
-                        speedText = "%.1f".format(convertedWindSpeed),
-                        unitText = result?.getSpeedUnit() ?: "km/h",
-                        angle = weatherData.currentWeather.windDirection.toFloat()
+                    val dirPoints = listOf(MapComponents.DirectionPoint(angle = weatherData.currentWeather.windDirection.toFloat(), sizeDp = 3f))
+                    MapComponents.CircularGaugeWithDirectionPoint(
+                        label = "%s".format( result?.getSpeedUnit() ?: "km/h"),
+                        value = "%.1f".format(convertedWindSpeed),
+                        points = dirPoints,
+                        gaugeSize = 40,
+                        color = MaterialTheme.colorScheme.onTertiaryContainer,
+                        labelFontSize = 0.sp,
+                        valueFontSize = 12.sp,
+                        circleStrokeWidth = 1.5f
                     )
                 }
             }
@@ -165,42 +171,3 @@ private fun WeatherChip(text: String) {
     }
 }
 
-@Composable
-private fun WeatherChipWithDirection(speedText: String, unitText: String, angle: Float) {
-    Surface(
-        color = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.9f),
-        shape = RoundedCornerShape(20.dp),
-        tonalElevation = 2.dp
-    ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            Text(
-                text = "$speedText $unitText",
-                style = MaterialTheme.typography.labelLarge,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onTertiaryContainer
-            )
-            
-            Box(contentAlignment = Alignment.Center, modifier = Modifier.size(20.dp)) {
-                Canvas(modifier = Modifier.fillMaxSize()) {
-                    val radius = size.minDimension / 2
-                    drawCircle(color = Color.Gray.copy(alpha = 0.3f), style = Stroke(width = 1.5.dp.toPx()))
-                    
-                    val angleRad = Math.toRadians(angle.toDouble() - 90.0)
-                    val dotRadius = 3.dp.toPx()
-                    val dotX = (size.width / 2) + (radius) * cos(angleRad).toFloat()
-                    val dotY = (size.height / 2) + (radius) * sin(angleRad).toFloat()
-                    
-                    drawCircle(
-                        color = Color.Red,
-                        radius = dotRadius,
-                        center = Offset(dotX, dotY)
-                    )
-                }
-            }
-        }
-    }
-}

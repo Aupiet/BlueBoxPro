@@ -37,6 +37,7 @@ private val LightColorScheme = lightColorScheme(
 fun BlueBoxProTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     dynamicColor: Boolean = true,
+    palette: ThemePalette = ThemePalette.OCEAN,
     content: @Composable () -> Unit
 ) {
     val colorScheme = when {
@@ -45,8 +46,8 @@ fun BlueBoxProTheme(
             if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
         }
 
-        darkTheme -> DarkColorScheme
-        else -> LightColorScheme
+        darkTheme -> palette.getDarkColorScheme()
+        else -> palette.getLightColorScheme()
     }
 
     MaterialTheme(
