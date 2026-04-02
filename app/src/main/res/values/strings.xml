@@ -10,6 +10,14 @@
     <!-- Settings Page -->
     <string name="settings_title">Settings</string>
     <string name="dark_mode">Dark Mode</string>
+    <string name="theme_section">Appearance</string>
+    <string name="palette_label">Theme Palette</string>
+    <string name="metrics_section">Metrics &amp; Units</string>
+    <string name="unit_speed_label">Speed</string>
+    <string name="unit_distance_label">Distance</string>
+    <string name="unit_altitude_label">Altitude</string>
+    <string name="unit_angle_label">Angle</string>
+    
     <string name="unit_system_title">Unit System</string>
     <string name="unit_metric_kmh">Metric (km/h, m)</string>
     <string name="unit_metric_ms">Metric (m/s, m)</string>

@@ -1,10 +1,6 @@
 /**
  * Reusable UI components for map displays, navigation panels, and spatial data visualization.
- * This file provides specialized components like a circular map with an integrated compass,
- * as well as generic map containers using Osmdroid.
- * 
- * It supports adaptive layouts for portrait and landscape orientations, matching the 
- * provided design sketches.
+ * Also includes standard containers and styling for consistency across pages.
  */
 package com.example.blueboxpro.ui.components
 
@@ -24,9 +20,8 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -44,6 +39,7 @@ import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -64,6 +60,71 @@ import org.osmdroid.views.overlay.Polyline
 import kotlin.math.cos
 import kotlin.math.min
 import kotlin.math.sin
+
+/**
+ * A standard card container used throughout the app to group information.
+ */
+@Composable
+fun SettingsCard(
+    modifier: Modifier = Modifier,
+    containerColor: Color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+    content: @Composable ColumnScope.() -> Unit
+) {
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = containerColor),
+        shape = RoundedCornerShape(12.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+    ) {
+        Column(modifier = Modifier.padding(vertical = 4.dp)) {
+            content()
+        }
+    }
+}
+
+/**
+ * A standard header for sections.
+ */
+@Composable
+fun SectionHeader(
+    text: String,
+    modifier: Modifier = Modifier,
+    color: Color = MaterialTheme.colorScheme.primary
+) {
+    Text(
+        text = text.uppercase(),
+        style = MaterialTheme.typography.labelMedium,
+        color = color,
+        fontWeight = FontWeight.Bold,
+        modifier = modifier.padding(start = 4.dp, bottom = 8.dp, top = 16.dp)
+    )
+}
+
+/**
+ * A card for dashboard-like displays.
+ */
+@Composable
+fun DashboardCard(
+    modifier: Modifier = Modifier,
+    containerColor: Color = MaterialTheme.colorScheme.secondaryContainer,
+    contentPadding: Dp = 16.dp,
+    content: @Composable ColumnScope.() -> Unit
+) {
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = containerColor),
+        shape = RoundedCornerShape(16.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .padding(contentPadding)
+                .fillMaxWidth(),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            content()
+        }
+    }
+}
 
 /**
  * Collection of map-related UI components and layout logic.
@@ -145,8 +206,8 @@ object MapComponents {
                             CircularGaugeWithDirectionPoint("VENT (${result.getSpeedUnit()})", windS, emptyList(), 90, MaterialTheme.colorScheme.tertiary)
                             val windD = weatherData?.currentWeather?.windDirection?.toFloat()
                             val dirPoints = mutableListOf<DirectionPoint>()
-                            windD?.let { dirPoints.add(DirectionPoint(angle = it, color = Color.Red)) }
-                            dirPoints.add(DirectionPoint(angle = result.getCog(), color = Color.Blue))
+                            windD?.let { dirPoints.add(DirectionPoint(angle = it, color = MaterialTheme.colorScheme.error)) }
+                            dirPoints.add(DirectionPoint(angle = result.getCog(), color = MaterialTheme.colorScheme.primary))
                             CircularGaugeWithDirectionPoint("DIR. (°)", windD?.let { "${it.toInt()}" } ?: "...", dirPoints, 90, MaterialTheme.colorScheme.tertiary)
                         }
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
@@ -174,7 +235,7 @@ object MapComponents {
                 Spacer(modifier = Modifier.height(12.dp))
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-                        CircularGaugeWithDirectionPoint("SOG (${result.getSpeedUnit()})", STAT_FORMAT.format(result.getSog()), emptyList(), 78)
+                        CircularGaugeWithDirectionPoint("SOG (${result.getSpeedUnit()})", STAT_FORMAT.format(result.getSog()), emptyList(), 78, MaterialTheme.colorScheme.primary)
                         val windS = weatherData?.currentWeather?.windSpeed?.let { 
                             val conv = Converter.convertSpeed(it.toFloat() / 3.6f, unitSystem)
                             STAT_FORMAT.format(conv)
@@ -182,8 +243,8 @@ object MapComponents {
                         CircularGaugeWithDirectionPoint("VENT (${result.getSpeedUnit()})", windS, emptyList(), 78, MaterialTheme.colorScheme.tertiary)
                         val windD = weatherData?.currentWeather?.windDirection?.toFloat()
                         val dirPoints = mutableListOf<DirectionPoint>()
-                        windD?.let { dirPoints.add(DirectionPoint(angle = it, color = Color.Red)) }
-                        dirPoints.add(DirectionPoint(angle = result.getCog(), color = Color.Blue))
+                        windD?.let { dirPoints.add(DirectionPoint(angle = it, color = MaterialTheme.colorScheme.error)) }
+                        dirPoints.add(DirectionPoint(angle = result.getCog(), color = MaterialTheme.colorScheme.secondary))
                         CircularGaugeWithDirectionPoint("DIR. (°)", windD?.let { "${it.toInt()}" } ?: "...", dirPoints, 78, MaterialTheme.colorScheme.tertiary)
                     }
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
@@ -250,7 +311,7 @@ object MapComponents {
                         mapView.mapOrientation = -animatedCog; mapView.overlays.clear()
                         if (recordingPoints.isNotEmpty()) {
                             val tracePoints = recordingPoints.map { GeoPoint(it.latitude, it.longitude) }
-                            mapView.overlays.add(Polyline().apply { setPoints(tracePoints); outlinePaint.color = AndroidColor.rgb(33, 150, 243); outlinePaint.strokeWidth = TRACE_LINE_WIDTH })
+                            mapView.overlays.add(Polyline().apply { setPoints(tracePoints); outlinePaint.color = primaryColor.toArgb(); outlinePaint.strokeWidth = TRACE_LINE_WIDTH })
                         }
                         location?.let { geoPoint ->
                             mapView.controller.animateTo(geoPoint)
@@ -297,7 +358,7 @@ object MapComponents {
     @SuppressLint("ClickableViewAccessibility")
     @Composable
     fun MapContainer(location: GeoPoint?, modifier: Modifier = Modifier, zoomLevel: Double = DEFAULT_ZOOM_LEVEL, isLocked: Boolean = true, autoCenter: Boolean = true) {
-        val positionLabel = stringResource(R.string.marker_position)
+        val positionLabel = stringResource(R.string.marker_position); val primaryColor = MaterialTheme.colorScheme.primary
         AndroidView(factory = { ctx -> MapView(ctx).apply { setTileSource(TileSourceFactory.MAPNIK); setMultiTouchControls(!isLocked); if (isLocked) setOnTouchListener { _, _ -> true }; controller.setZoom(zoomLevel); location?.let { controller.setCenter(it) } } }, update = { mapView -> location?.let { geoPoint -> if (autoCenter) mapView.controller.animateTo(geoPoint); mapView.overlays.clear(); val marker = Marker(mapView).apply { position = geoPoint; setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM); title = positionLabel }; mapView.overlays.add(marker); mapView.invalidate() } }, modifier = modifier)
     }
 
@@ -305,10 +366,11 @@ object MapComponents {
     @Composable
     fun SessionMapContainer(points: List<GpsPoint>, unitSystem: String = "METRIC_KMH", modifier: Modifier = Modifier, selectedPointIndex: Int = -1, onPointTapped: (Int) -> Unit = {}) {
         if (points.isEmpty()) return
+        val primaryColor = MaterialTheme.colorScheme.primary
         val startLabel = stringResource(R.string.marker_start); val endLabel = stringResource(R.string.marker_end); val pointFormat = stringResource(R.string.marker_point_format); val snippetFormat = stringResource(R.string.marker_snippet_format)
         val unitSystemEnum = when (unitSystem) { "METRIC_KMH" -> UnitSystem.METRIC_KMH; "METRIC_MS" -> UnitSystem.METRIC_MS; "IMPERIAL" -> UnitSystem.IMPERIAL; "NAUTICAL" -> UnitSystem.NAUTICAL; else -> UnitSystem.METRIC_KMH }
         AndroidView(factory = { ctx -> MapView(ctx).apply { setTileSource(TileSourceFactory.MAPNIK); setMultiTouchControls(true); controller.setZoom(SESSION_MAP_ZOOM) } }, update = { mapView ->
-            mapView.overlays.clear(); val geoPoints = points.map { GeoPoint(it.latitude, it.longitude) }; mapView.overlays.add(Polyline().apply { setPoints(geoPoints); outlinePaint.color = AndroidColor.rgb(33, 150, 243); outlinePaint.strokeWidth = SESSION_TRACE_LINE_WIDTH }); mapView.overlays.add(Marker(mapView).apply { position = geoPoints.first(); setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM); title = startLabel; icon = AppCompatResources.getDrawable(mapView.context, org.osmdroid.library.R.drawable.marker_default) })
+            mapView.overlays.clear(); val geoPoints = points.map { GeoPoint(it.latitude, it.longitude) }; mapView.overlays.add(Polyline().apply { setPoints(geoPoints); outlinePaint.color = primaryColor.toArgb(); outlinePaint.strokeWidth = SESSION_TRACE_LINE_WIDTH }); mapView.overlays.add(Marker(mapView).apply { position = geoPoints.first(); setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM); title = startLabel; icon = AppCompatResources.getDrawable(mapView.context, org.osmdroid.library.R.drawable.marker_default) })
             if (geoPoints.size > 1) mapView.overlays.add(Marker(mapView).apply { position = geoPoints.last(); setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM); title = endLabel })
             if (selectedPointIndex in points.indices) {
                 val p = points[selectedPointIndex]; val convertedSog = when (unitSystemEnum) { UnitSystem.METRIC_KMH -> p.sog * 3.6f; UnitSystem.METRIC_MS -> p.sog; UnitSystem.IMPERIAL -> p.sog * 2.23694f; UnitSystem.NAUTICAL -> p.sog * 1.94384f; else -> p.sog }; val speedUnit = when (unitSystemEnum) { UnitSystem.METRIC_KMH -> "km/h"; UnitSystem.METRIC_MS -> "m/s"; UnitSystem.IMPERIAL -> "mph"; UnitSystem.NAUTICAL -> "kn"; else -> "km/h" }

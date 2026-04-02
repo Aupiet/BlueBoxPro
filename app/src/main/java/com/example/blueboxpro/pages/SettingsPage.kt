@@ -1,177 +1,267 @@
 /**
  * This page allows the user to configure general application settings,
- * such as theme, unit system, and language.
+ * such as theme, unit systems for various metrics, and language.
  */
 package com.example.blueboxpro.pages
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.selection.selectable
-import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.example.blueboxpro.R
 import com.example.blueboxpro.Process.MovementProcessor
+import com.example.blueboxpro.R
+import com.example.blueboxpro.ui.components.SettingsCard
+import com.example.blueboxpro.ui.components.SectionHeader
+import com.example.blueboxpro.ui.theme.ThemePalette
 
 /**
- * The settings screen (Page 4).
- * 
- * @param isDarkMode Whether the dark theme is currently enabled.
- * @param onDarkModeChange Callback to toggle dark mode.
- * @param unitSystem The current unit system display string.
- * @param onUnitSystemChange Callback when a new unit system is selected.
- * @param language The current language key.
- * @param onLanguageChange Callback when a new language is selected.
- * @param onNavigateToAdvancedSettings Callback to open the advanced settings screen.
+ * The reworked settings screen (Page 4).
  */
 @Composable
 fun SettingsPage(
     isDarkMode: Boolean,
     onDarkModeChange: (Boolean) -> Unit,
-    unitSystem: String,
-    onUnitSystemChange: (String) -> Unit,
+    themePalette: String,
+    onThemePaletteChange: (String) -> Unit,
+    unitSpeed: String,
+    onUnitSpeedChange: (String) -> Unit,
+    unitDistance: String,
+    onUnitDistanceChange: (String) -> Unit,
+    unitAltitude: String,
+    onUnitAltitudeChange: (String) -> Unit,
+    unitAngle: String,
+    onUnitAngleChange: (String) -> Unit,
     language: String,
     onLanguageChange: (String) -> Unit,
     onNavigateToAdvancedSettings: () -> Unit,
     @Suppress("UNUSED_PARAMETER") processor: MovementProcessor? = null
 ) {
     val scrollState = rememberScrollState()
-    
-    // Mapping of internal keys to localized display strings to ensure selection works
-    val unitOptionsMap = mapOf(
-        "METRIC_KMH" to stringResource(R.string.unit_metric_kmh),
-        "METRIC_MS" to stringResource(R.string.unit_metric_ms),
-        "IMPERIAL" to stringResource(R.string.unit_imperial),
-        "NAUTICAL" to stringResource(R.string.unit_nautical)
-    )
 
     Column(
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(scrollState)
-            .padding(PADDING_MEDIUM)
+            .padding(SETTINGS_PADDING)
     ) {
-        // Dark Mode Toggle
-        ListItem(
-            headlineContent = { Text(stringResource(R.string.dark_mode)) },
-            trailingContent = {
-                Switch(
-                    checked = isDarkMode,
-                    onCheckedChange = onDarkModeChange
+        // --- Appearance Section ---
+        SectionHeader(stringResource(R.string.theme_section), modifier = Modifier.padding(top = 0.dp))
+        SettingsCard {
+            ListItem(
+                headlineContent = { Text(stringResource(R.string.dark_mode)) },
+                trailingContent = {
+                    Switch(checked = isDarkMode, onCheckedChange = onDarkModeChange)
+                },
+                colors = ListItemDefaults.colors(containerColor = androidx.compose.ui.graphics.Color.Transparent)
+            )
+            
+            HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+            
+            var showPaletteDialog by remember { mutableStateOf(false) }
+            ListItem(
+                modifier = Modifier.clickable { showPaletteDialog = true },
+                headlineContent = { Text(stringResource(R.string.palette_label)) },
+                supportingContent = { Text(themePalette) },
+                trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null) },
+                colors = ListItemDefaults.colors(containerColor = androidx.compose.ui.graphics.Color.Transparent)
+            )
+
+            if (showPaletteDialog) {
+                SettingsSelectionDialog(
+                    title = stringResource(R.string.palette_label),
+                    options = ThemePalette.entries.map { it.name },
+                    selectedOption = themePalette,
+                    onOptionSelected = { onThemePaletteChange(it); showPaletteDialog = false },
+                    onDismiss = { showPaletteDialog = false }
                 )
             }
-        )
-        
-        HorizontalDivider()
-
-        // Unit System Selection
-        Text(
-            text = stringResource(R.string.unit_system_title),
-            style = MaterialTheme.typography.titleMedium,
-            modifier = Modifier.padding(top = SPACING_MEDIUM, bottom = SPACING_SMALL)
-        )
-        
-        Column(Modifier.selectableGroup()) {
-            unitOptionsMap.forEach { (key, label) ->
-                val isSelected = (key == unitSystem)
-                Row(
-                    Modifier
-                        .fillMaxWidth()
-                        .height(OPTION_HEIGHT)
-                        .selectable(
-                            selected = isSelected,
-                            onClick = { onUnitSystemChange(key) },
-                            role = Role.RadioButton
-                        )
-                        .padding(horizontal = PADDING_MEDIUM),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    RadioButton(
-                        selected = isSelected,
-                        onClick = null 
-                    )
-                    Text(
-                        text = label,
-                        style = MaterialTheme.typography.bodyLarge,
-                        modifier = Modifier.padding(start = PADDING_MEDIUM)
-                    )
-                }
-            }
         }
 
-        HorizontalDivider(modifier = Modifier.padding(vertical = SPACING_SMALL))
+        Spacer(modifier = Modifier.height(SETTINGS_SPACING))
 
-        // Language Selection
-        Text(
-            text = stringResource(R.string.language_title),
-            style = MaterialTheme.typography.titleMedium,
-            modifier = Modifier.padding(top = SPACING_SMALL, bottom = SPACING_SMALL)
-        )
-        
-        val langOptionsMap = mapOf(
-            LANG_KEY_FRENCH to stringResource(R.string.lang_french),
-            LANG_KEY_ENGLISH to stringResource(R.string.lang_english)
-        )
-        
-        Column(Modifier.selectableGroup()) {
-            langOptionsMap.forEach { (key, label) ->
-                Row(
-                    Modifier
-                        .fillMaxWidth()
-                        .height(OPTION_HEIGHT)
-                        .selectable(
-                            selected = (key == language),
-                            onClick = { onLanguageChange(key) },
-                            role = Role.RadioButton
-                        )
-                        .padding(horizontal = PADDING_MEDIUM),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    RadioButton(
-                        selected = (key == language),
-                        onClick = null
-                    )
-                    Text(
-                        text = label,
-                        style = MaterialTheme.typography.bodyLarge,
-                        modifier = Modifier.padding(start = PADDING_MEDIUM)
-                    )
-                }
-            }
+        // --- Metrics Section ---
+        SectionHeader(stringResource(R.string.metrics_section))
+        SettingsCard {
+            MetricSelectionRow(
+                label = stringResource(R.string.unit_speed_label),
+                currentValue = unitSpeed,
+                options = listOf("km/h", "m/s", "mph", "kn"),
+                onSelected = onUnitSpeedChange
+            )
+            HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+            MetricSelectionRow(
+                label = stringResource(R.string.unit_distance_label),
+                currentValue = unitDistance,
+                options = listOf("km", "m", "mi", "nm"),
+                onSelected = onUnitDistanceChange
+            )
+            HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+            MetricSelectionRow(
+                label = stringResource(R.string.unit_altitude_label),
+                currentValue = unitAltitude,
+                options = listOf("m", "ft"),
+                onSelected = onUnitAltitudeChange
+            )
+            HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+            MetricSelectionRow(
+                label = stringResource(R.string.unit_angle_label),
+                currentValue = unitAngle,
+                options = listOf("°", "rad"),
+                onSelected = onUnitAngleChange
+            )
         }
 
-        Spacer(modifier = Modifier.height(SPACING_XLARGE))
+        Spacer(modifier = Modifier.height(SETTINGS_SPACING))
 
-        // Advanced Settings Navigation
-        Button(
-            onClick = onNavigateToAdvancedSettings,
-            modifier = Modifier.fillMaxWidth()
+        // --- Language Section ---
+        SectionHeader(stringResource(R.string.language_title))
+        SettingsCard {
+            MetricSelectionRow(
+                label = stringResource(R.string.language_title),
+                currentValue = language,
+                options = listOf("Français", "English"),
+                onSelected = onLanguageChange
+            )
+        }
+
+        Spacer(modifier = Modifier.height(SETTINGS_SPACING))
+
+        // --- Advanced Settings Section ---
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { onNavigateToAdvancedSettings() },
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
         ) {
-            Text(stringResource(R.string.advanced_settings))
+            Row(
+                modifier = Modifier.padding(16.dp).fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column {
+                    Text(
+                        text = stringResource(R.string.advanced_settings),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
+                    Text(
+                        text = "Expert options & Calibration",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
+                    )
+                }
+                Icon(
+                    Icons.AutoMirrored.Filled.KeyboardArrowRight, 
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onPrimaryContainer
+                )
+            }
         }
 
-        Spacer(modifier = Modifier.weight(1f))
+        Spacer(modifier = Modifier.height(32.dp))
         
         Text(
             text = stringResource(R.string.version_pre_alpha),
             style = MaterialTheme.typography.bodySmall,
-            modifier = Modifier.align(Alignment.CenterHorizontally).padding(bottom = SPACING_SMALL)
+            modifier = Modifier.align(Alignment.CenterHorizontally).padding(bottom = 16.dp),
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
         )
     }
 }
 
-private val PADDING_MEDIUM = 16.dp
-private val SPACING_SMALL = 8.dp
-private val SPACING_MEDIUM = 16.dp
-private val SPACING_LARGE = 24.dp
-private val SPACING_XLARGE = 32.dp
-private val OPTION_HEIGHT = 48.dp
+@Composable
+fun MetricSelectionRow(
+    label: String,
+    currentValue: String,
+    options: List<String>,
+    onSelected: (String) -> Unit
+) {
+    var showDialog by remember { mutableStateOf(false) }
+    
+    ListItem(
+        modifier = Modifier.clickable { showDialog = true },
+        headlineContent = { Text(label) },
+        trailingContent = {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = currentValue,
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.Bold
+                )
+                Icon(
+                    Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                    contentDescription = null,
+                    modifier = Modifier.size(20.dp),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        },
+        colors = ListItemDefaults.colors(containerColor = androidx.compose.ui.graphics.Color.Transparent)
+    )
 
-private const val LANG_KEY_FRENCH = "Français"
-private const val LANG_KEY_ENGLISH = "English"
+    if (showDialog) {
+        SettingsSelectionDialog(
+            title = label,
+            options = options,
+            selectedOption = currentValue,
+            onOptionSelected = { onSelected(it); showDialog = false },
+            onDismiss = { showDialog = false }
+        )
+    }
+}
+
+@Composable
+fun SettingsSelectionDialog(
+    title: String,
+    options: List<String>,
+    selectedOption: String,
+    onOptionSelected: (String) -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(title) },
+        text = {
+            Column {
+                options.forEach { option ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onOptionSelected(option) }
+                            .padding(vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        RadioButton(
+                            selected = (option == selectedOption),
+                            onClick = null
+                        )
+                        Text(
+                            text = option,
+                            style = MaterialTheme.typography.bodyLarge,
+                            modifier = Modifier.padding(start = 16.dp)
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(android.R.string.cancel))
+            }
+        }
+    )
+}
+
+private val SETTINGS_PADDING = 16.dp
+private val SETTINGS_SPACING = 20.dp

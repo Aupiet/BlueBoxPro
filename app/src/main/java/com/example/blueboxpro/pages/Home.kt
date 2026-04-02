@@ -6,7 +6,6 @@
 package com.example.blueboxpro.pages
 
 import android.content.res.Configuration
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -14,7 +13,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
@@ -22,18 +20,16 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.example.blueboxpro.Process.Converter
-import com.example.blueboxpro.ui.components.MapComponents
 import com.example.blueboxpro.Process.MovementProcessor
 import com.example.blueboxpro.Process.WeatherData
 import com.example.blueboxpro.Process.WeatherManager
 import com.example.blueboxpro.R
 import com.example.blueboxpro.Save.SessionManager
+import com.example.blueboxpro.ui.components.DashboardCard
+import com.example.blueboxpro.ui.components.SectionHeader
 import java.text.SimpleDateFormat
 import java.util.*
-import kotlin.math.cos
-import kotlin.math.sin
 
 /**
  * The landing page of the application (Home Page).
@@ -98,20 +94,17 @@ fun Page1(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column(modifier = Modifier.weight(1f)) {
-                    Text(text = stringResource(R.string.last_session_header), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
-                    Spacer(modifier = Modifier.height(4.dp))
+                    SectionHeader(stringResource(R.string.last_session_header))
                     LastSessionCard(lastSession, isLandscape = true)
                 }
                 Column(modifier = Modifier.weight(1f)) {
-                    Text(text = stringResource(R.string.start_new_session_label), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
-                    Spacer(modifier = Modifier.height(4.dp))
+                    SectionHeader(stringResource(R.string.start_new_session_label))
                     StartRecordingCard(isRecording, sessions.size, context, isLandscape = true)
                 }
             }
         } else {
             Spacer(modifier = Modifier.height(HOME_SPACING_LARGE))
-            Text(text = stringResource(R.string.last_session_header), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-            Spacer(modifier = Modifier.height(HOME_SPACING_SMALL))
+            SectionHeader(stringResource(R.string.last_session_header))
             LastSessionCard(lastSession)
             Spacer(modifier = Modifier.height(HOME_SPACING_MEDIUM))
             StartRecordingCard(isRecording, sessions.size, context)
@@ -126,7 +119,6 @@ private fun WindInfoCard(
     isLandscape: Boolean
 ) {
     val unitSystem = Converter.getUnitSystem(unitSystemStr)
-    
     val resultTemplate = com.example.blueboxpro.Process.MovementResult(
         unitSystem = unitSystem,
         accelX = 0f, accelY = 0f, accelZ = 0f,
@@ -135,9 +127,8 @@ private fun WindInfoCard(
     )
     val speedUnit = resultTemplate.getSpeedUnit()
 
-    Card(
-        modifier = Modifier.fillMaxWidth(if (isLandscape) 0.9f else 1f),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.tertiaryContainer)
+    DashboardCard(
+        containerColor = MaterialTheme.colorScheme.tertiaryContainer
     ) {
         if (weatherData != null) {
             val windSpeedKmh = weatherData.currentWeather.windSpeed.toFloat()
@@ -152,24 +143,23 @@ private fun WindInfoCard(
                 horizontalArrangement = Arrangement.SpaceAround
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(text = "VENT", style = MaterialTheme.typography.labelSmall)
-                    Text(text = "%.1f %s".format(convertedWindSpeed, speedUnit), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                    Text(text = cardinal, style = MaterialTheme.typography.bodySmall)
+                    Text(text = "VENT", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onTertiaryContainer)
+                    Text(
+                        text = "%.1f %s".format(convertedWindSpeed, speedUnit), 
+                        style = MaterialTheme.typography.titleMedium, 
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onTertiaryContainer
+                    )
+                    Text(text = cardinal, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onTertiaryContainer)
                 }
 
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(text = "DIRECTION", style = MaterialTheme.typography.labelSmall)
-                    
-                    val dirPoints = listOf(MapComponents.DirectionPoint(angle = windDir.toFloat(), sizeDp = 4f))
-                    MapComponents.CircularGaugeWithDirectionPoint(
-                        label = "",
-                        value = "%.0f°".format(windDir),
-                        points = dirPoints,
-                        gaugeSize = if (isLandscape) 40 else 50,
-                        color = MaterialTheme.colorScheme.onTertiaryContainer,
-                        labelFontSize = 0.sp,
-                        valueFontSize = 12.sp,
-                        circleStrokeWidth = 2f
+                    Text(text = "DIRECTION", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onTertiaryContainer)
+                    Text(
+                        text = "%.0f°".format(windDir), 
+                        style = MaterialTheme.typography.titleMedium, 
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onTertiaryContainer
                     )
                 }
             }
@@ -189,41 +179,45 @@ private fun CombinedHeaderCard(
     result: com.example.blueboxpro.Process.MovementResult,
     isLandscape: Boolean
 ) {
-    Card(
-        modifier = Modifier.fillMaxWidth(if (isLandscape) 0.9f else 1f),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)
+    DashboardCard(
+        containerColor = MaterialTheme.colorScheme.secondaryContainer
     ) {
-        Column(
-            modifier = Modifier.padding(if (isLandscape) 8.dp else HOME_PADDING_MEDIUM).fillMaxWidth(),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Text(text = dateStr, style = if (isLandscape) MaterialTheme.typography.titleMedium else MaterialTheme.typography.titleLarge)
-            Text(text = timeStr, style = if (isLandscape) MaterialTheme.typography.headlineLarge else MaterialTheme.typography.displayMedium, fontWeight = FontWeight.Bold)
-            
-            val weatherLabel = if (weatherData != null) {
-                val description = WeatherManager.getWeatherDescription(weatherData.currentWeather.weatherCode)
-                "$description, ${weatherData.currentWeather.temperature.toInt()}°C"
-            } else {
-                "En attente..."
+        Text(text = dateStr, style = if (isLandscape) MaterialTheme.typography.titleMedium else MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onSecondaryContainer)
+        Text(text = timeStr, style = if (isLandscape) MaterialTheme.typography.headlineLarge else MaterialTheme.typography.displayMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSecondaryContainer)
+        
+        val weatherLabel = if (weatherData != null) {
+            val description = WeatherManager.getWeatherDescription(weatherData.currentWeather.weatherCode)
+            "$description, ${weatherData.currentWeather.temperature.toInt()}°C"
+        } else {
+            "En attente..."
+        }
+        
+        Text(
+            text = weatherLabel, 
+            style = if (isLandscape) MaterialTheme.typography.bodySmall else MaterialTheme.typography.bodyLarge,
+            color = if (weatherData == null) MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.6f) else MaterialTheme.colorScheme.onSecondaryContainer
+        )
+        
+        Spacer(modifier = Modifier.height(if (isLandscape) 4.dp else HOME_SPACING_MEDIUM))
+        
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(text = "SOG", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSecondaryContainer)
+                Text(
+                    text = "%.1f %s".format(result.getSog(), result.getSpeedUnit()), 
+                    style = if (isLandscape) MaterialTheme.typography.titleLarge else MaterialTheme.typography.headlineMedium, 
+                    fontWeight = FontWeight.Bold, 
+                    color = MaterialTheme.colorScheme.primary
+                )
             }
-            
-            Text(
-                text = weatherLabel, 
-                style = if (isLandscape) MaterialTheme.typography.bodySmall else MaterialTheme.typography.bodyLarge,
-                color = if (weatherData == null) MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.6f) else Color.Unspecified
-            )
-            
-            Spacer(modifier = Modifier.height(if (isLandscape) 4.dp else HOME_SPACING_MEDIUM))
-            
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(text = "SOG", style = MaterialTheme.typography.labelSmall)
-                    Text(text = "%.1f %s".format(result.getSog(), result.getSpeedUnit()), style = if (isLandscape) MaterialTheme.typography.titleLarge else MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
-                }
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(text = "COG", style = MaterialTheme.typography.labelSmall)
-                    Text(text = "%.0f°".format(result.getCog()), style = if (isLandscape) MaterialTheme.typography.titleLarge else MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.secondary)
-                }
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(text = "COG", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSecondaryContainer)
+                Text(
+                    text = "%.0f°".format(result.getCog()), 
+                    style = if (isLandscape) MaterialTheme.typography.titleLarge else MaterialTheme.typography.headlineMedium, 
+                    fontWeight = FontWeight.Bold, 
+                    color = MaterialTheme.colorScheme.secondary
+                )
             }
         }
     }
@@ -231,23 +225,23 @@ private fun CombinedHeaderCard(
 
 @Composable
 private fun LastSessionCard(lastSession: com.example.blueboxpro.Save.Session?, isLandscape: Boolean = false) {
-    Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
+    DashboardCard(
+        containerColor = MaterialTheme.colorScheme.surfaceVariant
+    ) {
         if (lastSession != null) {
-            Column(modifier = Modifier.padding(if (isLandscape) 8.dp else HOME_PADDING_MEDIUM)) {
-                Text(text = lastSession.name, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold)
-                Spacer(modifier = Modifier.height(if (isLandscape) 2.dp else 4.dp))
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Text(text = lastSession.date, style = MaterialTheme.typography.labelSmall)
-                    Text(text = lastSession.duration, style = MaterialTheme.typography.labelSmall)
-                }
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Text(text = lastSession.distance, style = MaterialTheme.typography.labelSmall)
-                    Text(text = lastSession.averageSpeed, style = MaterialTheme.typography.labelSmall)
-                }
+            Text(text = lastSession.name, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Spacer(modifier = Modifier.height(if (isLandscape) 2.dp else 4.dp))
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Text(text = lastSession.date, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(text = lastSession.duration, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Text(text = lastSession.distance, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(text = lastSession.averageSpeed, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         } else {
-            Box(modifier = Modifier.fillMaxWidth().padding(if (isLandscape) 8.dp else HOME_PADDING_MEDIUM), contentAlignment = Alignment.Center) {
-                Text(text = stringResource(R.string.no_saves), style = MaterialTheme.typography.labelSmall)
+            Box(modifier = Modifier.fillMaxWidth().padding(if (isLandscape) 8.dp else 12.dp), contentAlignment = Alignment.Center) {
+                Text(text = stringResource(R.string.no_saves), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
     }
@@ -255,15 +249,27 @@ private fun LastSessionCard(lastSession: com.example.blueboxpro.Save.Session?, i
 
 @Composable
 private fun StartRecordingCard(isRecording: Boolean, sessionCount: Int, context: android.content.Context, isLandscape: Boolean = false) {
-    Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = if (isRecording) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.primaryContainer)) {
-        Column(modifier = Modifier.padding(if (isLandscape) 8.dp else HOME_PADDING_MEDIUM), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-            if (!isLandscape) {
-                Text(text = if (isRecording) stringResource(R.string.recording_in_progress) else stringResource(R.string.start_new_session_label), style = MaterialTheme.typography.titleMedium, textAlign = TextAlign.Center)
-                Spacer(modifier = Modifier.height(HOME_SPACING_MEDIUM))
-            }
-            Button(onClick = { if (!isRecording) SessionManager.startRecording("Session ${sessionCount + 1}") else SessionManager.stopRecording(context) }, modifier = if (isLandscape) Modifier.fillMaxWidth().height(48.dp) else Modifier, colors = if (isRecording) ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error) else ButtonDefaults.buttonColors()) {
-                Text(text = if (isRecording) stringResource(R.string.stop_recording) else stringResource(R.string.start_recording), style = if (isLandscape) MaterialTheme.typography.labelLarge else MaterialTheme.typography.labelLarge)
-            }
+    DashboardCard(
+        containerColor = if (isRecording) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.primaryContainer
+    ) {
+        if (!isLandscape) {
+            Text(
+                text = if (isRecording) stringResource(R.string.recording_in_progress) else stringResource(R.string.start_new_session_label), 
+                style = MaterialTheme.typography.titleMedium, 
+                textAlign = TextAlign.Center,
+                color = if (isRecording) MaterialTheme.colorScheme.onErrorContainer else MaterialTheme.colorScheme.onPrimaryContainer
+            )
+            Spacer(modifier = Modifier.height(HOME_SPACING_MEDIUM))
+        }
+        Button(
+            onClick = { if (!isRecording) SessionManager.startRecording("Session ${sessionCount + 1}") else SessionManager.stopRecording(context) }, 
+            modifier = if (isLandscape) Modifier.fillMaxWidth().height(48.dp) else Modifier, 
+            colors = if (isRecording) ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error) else ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+        ) {
+            Text(
+                text = if (isRecording) stringResource(R.string.stop_recording) else stringResource(R.string.start_recording), 
+                style = MaterialTheme.typography.labelLarge
+            )
         }
     }
 }

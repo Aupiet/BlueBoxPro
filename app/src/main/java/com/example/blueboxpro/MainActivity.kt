@@ -49,6 +49,7 @@ import com.example.blueboxpro.Process.WeatherManager
 import com.example.blueboxpro.Save.SessionManager
 import com.example.blueboxpro.pages.*
 import com.example.blueboxpro.ui.theme.BlueBoxProTheme
+import com.example.blueboxpro.ui.theme.ThemePalette
 import kotlinx.coroutines.launch
 import org.osmdroid.config.Configuration
 import org.osmdroid.util.GeoPoint
@@ -75,8 +76,13 @@ class MainActivity : AppCompatActivity() {
         setContent {
             val context = LocalContext.current
             var isDarkMode by rememberSaveable { mutableStateOf(Option.UI.isDarkMode) }
-            var unitSystemKey by rememberSaveable { mutableStateOf(Option.UI.unitSystem) }
+            var themePaletteKey by rememberSaveable { mutableStateOf(Option.UI.themePalette) }
             var language by rememberSaveable { mutableStateOf(Option.UI.language) }
+            
+            var unitSpeed by rememberSaveable { mutableStateOf(Option.UI.unitSpeed) }
+            var unitDistance by rememberSaveable { mutableStateOf(Option.UI.unitDistance) }
+            var unitAltitude by rememberSaveable { mutableStateOf(Option.UI.unitAltitude) }
+            var unitAngle by rememberSaveable { mutableStateOf(Option.UI.unitAngle) }
 
             val processor = remember { MovementProcessor() }
             var lastLocationState by remember { mutableStateOf<GeoPoint?>(null) }
@@ -118,7 +124,9 @@ class MainActivity : AppCompatActivity() {
                 permissionLauncher.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION))
             }
 
-            BlueBoxProTheme(darkTheme = isDarkMode) {
+            val currentPalette = try { ThemePalette.valueOf(themePaletteKey) } catch(e: Exception) { ThemePalette.OCEAN }
+
+            BlueBoxProTheme(darkTheme = isDarkMode, palette = currentPalette) {
                 val rootNavController = rememberNavController()
                 NavHost(navController = rootNavController, startDestination = ROUTE_MAIN) {
                     composable(ROUTE_MAIN) {
@@ -127,19 +135,38 @@ class MainActivity : AppCompatActivity() {
                             lastLocationState = lastLocationState,
                             weatherData = weatherData,
                             refreshTrigger = refreshTrigger,
-                            unitSystem = unitSystemKey,
+                            unitSpeed = unitSpeed,
+                            unitDistance = unitDistance,
+                            unitAltitude = unitAltitude,
+                            unitAngle = unitAngle,
                             language = language,
                             isDarkMode = isDarkMode,
+                            themePalette = themePaletteKey,
                             onDarkModeChange = { 
                                 isDarkMode = it
                                 Option.UI.isDarkMode = it
                                 Option.save(this@MainActivity) 
                             },
-                            onUnitSystemChange = { newUnit ->
-                                unitSystemKey = newUnit
-                                Option.UI.unitSystem = newUnit
+                            onThemePaletteChange = {
+                                themePaletteKey = it
+                                Option.UI.themePalette = it
+                                Option.save(this@MainActivity)
+                            },
+                            onUnitSpeedChange = { newUnit ->
+                                unitSpeed = newUnit
+                                Option.UI.unitSpeed = newUnit
+                                Option.UI.unitSystem = when(newUnit) {
+                                    "km/h" -> "METRIC_KMH"
+                                    "m/s" -> "METRIC_MS"
+                                    "mph" -> "IMPERIAL"
+                                    "kn" -> "NAUTICAL"
+                                    else -> "METRIC_KMH"
+                                }
                                 Option.save(this@MainActivity) 
                             },
+                            onUnitDistanceChange = { unitDistance = it; Option.UI.unitDistance = it; Option.save(this@MainActivity) },
+                            onUnitAltitudeChange = { unitAltitude = it; Option.UI.unitAltitude = it; Option.save(this@MainActivity) },
+                            onUnitAngleChange = { unitAngle = it; Option.UI.unitAngle = it; Option.save(this@MainActivity) },
                             onLanguageChange = { newLang ->
                                 language = newLang
                                 Option.UI.language = newLang
@@ -157,12 +184,12 @@ class MainActivity : AppCompatActivity() {
                             location = lastLocationState,
                             processor = processor,
                             weatherData = weatherData,
-                            unitSystem = unitSystemKey,
+                            unitSystem = Option.UI.unitSystem,
                             onBack = { rootNavController.popBackStack() }
                         )
                     }
                     composable(ROUTE_ADVANCED_SETTINGS) {
-                        AdvancedSettingsPage(processor = processor, refreshTrigger = refreshTrigger, unitSystem = unitSystemKey, onBack = { rootNavController.popBackStack() })
+                        AdvancedSettingsPage(processor = processor, refreshTrigger = refreshTrigger, unitSystem = Option.UI.unitSystem, onBack = { rootNavController.popBackStack() })
                     }
                     composable(ROUTE_SESSION_DETAIL, arguments = listOf(navArgument(ARG_SESSION_ID) { type = NavType.IntType })) { backStackEntry ->
                         val sessionId = backStackEntry.arguments?.getInt(ARG_SESSION_ID)
@@ -185,11 +212,19 @@ fun MainScreen(
     lastLocationState: GeoPoint?,
     weatherData: WeatherData?,
     refreshTrigger: Int,
-    unitSystem: String,
+    unitSpeed: String,
+    unitDistance: String,
+    unitAltitude: String,
+    unitAngle: String,
     language: String,
     isDarkMode: Boolean,
+    themePalette: String,
     onDarkModeChange: (Boolean) -> Unit,
-    onUnitSystemChange: (String) -> Unit,
+    onThemePaletteChange: (String) -> Unit,
+    onUnitSpeedChange: (String) -> Unit,
+    onUnitDistanceChange: (String) -> Unit,
+    onUnitAltitudeChange: (String) -> Unit,
+    onUnitAngleChange: (String) -> Unit,
     onLanguageChange: (String) -> Unit,
     onOpenFullScreenMap: () -> Unit,
     onNavigateToAdvancedSettings: () -> Unit,
@@ -234,10 +269,26 @@ fun MainScreen(
             userScrollEnabled = false
         ) { pageIndex ->
             when (pageIndex) {
-                0 -> Page1(processor, refreshTrigger, unitSystem, weatherData, { onTabSelected(1) }, { onTabSelected(3) })
-                1 -> Page2(lastLocationState, processor, refreshTrigger, unitSystem, weatherData, onOpenFullScreenMap)
+                0 -> Page1(processor, refreshTrigger, Option.UI.unitSystem, weatherData, { onTabSelected(1) }, { onTabSelected(3) })
+                1 -> Page2(lastLocationState, processor, refreshTrigger, Option.UI.unitSystem, weatherData, onOpenFullScreenMap)
                 2 -> Page3(processor, refreshTrigger, onNavigateToSessionDetail)
-                3 -> SettingsPage(isDarkMode, onDarkModeChange, unitSystem, onUnitSystemChange, language, onLanguageChange, onNavigateToAdvancedSettings, processor)
+                3 -> SettingsPage(
+                    isDarkMode = isDarkMode,
+                    onDarkModeChange = onDarkModeChange,
+                    themePalette = themePalette,
+                    onThemePaletteChange = onThemePaletteChange,
+                    unitSpeed = unitSpeed,
+                    onUnitSpeedChange = onUnitSpeedChange,
+                    unitDistance = unitDistance,
+                    onUnitDistanceChange = onUnitDistanceChange,
+                    unitAltitude = unitAltitude,
+                    onUnitAltitudeChange = onUnitAltitudeChange,
+                    unitAngle = unitAngle,
+                    onUnitAngleChange = onUnitAngleChange,
+                    language = language,
+                    onLanguageChange = onLanguageChange,
+                    onNavigateToAdvancedSettings = onNavigateToAdvancedSettings
+                )
             }
         }
     }

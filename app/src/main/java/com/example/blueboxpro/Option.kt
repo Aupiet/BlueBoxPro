@@ -44,8 +44,12 @@ object Option {
         val maxLogicalSpeedKmh: Double = 300.0,
         // UI Preferences
         val isDarkMode: Boolean = false,
+        val themePalette: String = "OCEAN",
         val language: String = "English",
-        val unitSystem: String = "METRIC_KMH"
+        val unitSpeed: String = "km/h",
+        val unitDistance: String = "km",
+        val unitAltitude: String = "m",
+        val unitAngle: String = "°"
     )
 
     /**
@@ -131,7 +135,14 @@ object Option {
      */
     object UI {
         var isDarkMode = false
+        var themePalette = "OCEAN"
         var language = App.LANG_NAME_EN
+        var unitSpeed = "km/h"
+        var unitDistance = "km"
+        var unitAltitude = "m"
+        var unitAngle = "°"
+        
+        // Backward compatibility
         var unitSystem = App.DEFAULT_UNIT_SYSTEM
     }
 
@@ -159,8 +170,12 @@ object Option {
             recordingFrequencyHz = Save.RECORDING_FREQUENCY_HZ,
             maxLogicalSpeedKmh = Save.MAX_LOGICAL_SPEED_KMH,
             isDarkMode = UI.isDarkMode,
+            themePalette = UI.themePalette,
             language = UI.language,
-            unitSystem = UI.unitSystem
+            unitSpeed = UI.unitSpeed,
+            unitDistance = UI.unitDistance,
+            unitAltitude = UI.unitAltitude,
+            unitAngle = UI.unitAngle
         )
         try {
             val jsonString = json.encodeToString(data)
@@ -202,8 +217,21 @@ object Option {
             Save.MAX_LOGICAL_SPEED_KMH = data.maxLogicalSpeedKmh
 
             UI.isDarkMode = data.isDarkMode
+            UI.themePalette = data.themePalette
             UI.language = data.language
-            UI.unitSystem = data.unitSystem
+            UI.unitSpeed = data.unitSpeed
+            UI.unitDistance = data.unitDistance
+            UI.unitAltitude = data.unitAltitude
+            UI.unitAngle = data.unitAngle
+            
+            // Sync unitSystem for legacy code
+            UI.unitSystem = when (UI.unitSpeed) {
+                "km/h" -> "METRIC_KMH"
+                "m/s" -> "METRIC_MS"
+                "mph" -> "IMPERIAL"
+                "kn" -> "NAUTICAL"
+                else -> "METRIC_KMH"
+            }
         } catch (e: Exception) {
             // Defaults remain if loading fails
         }
