@@ -7,6 +7,7 @@ import android.os.IBinder
 import com.example.blueboxpro.Option
 import com.example.blueboxpro.Save.SessionManager
 import kotlinx.coroutines.*
+import kotlin.system.exitProcess
 
 /**
  * Foreground service to maintain sensor data collection and processing
@@ -22,12 +23,22 @@ class BlueBoxService : Service() {
     
     private val serviceScope = CoroutineScope(Dispatchers.Main + Job())
     private var updateJob: Job? = null
+    private var backgroundTimeoutJob: Job? = null
 
     // For notification updates
     var lastWeatherData: WeatherData? = null
     var unitSystem: String = Option.UI.unitSystem
     
     var isAppInBackground: Boolean = false
+        set(value) {
+            field = value
+            if (value) {
+                startBackgroundTimeout()
+            } else {
+                cancelBackgroundTimeout()
+            }
+        }
+
     private var lastNotificationTime: Long = 0
     private var lastNotificationContent: String = ""
 
@@ -67,6 +78,22 @@ class BlueBoxService : Service() {
         }
     }
 
+    private fun startBackgroundTimeout() {
+        backgroundTimeoutJob?.cancel()
+        backgroundTimeoutJob = serviceScope.launch {
+            delay(5 * 60 * 1000L) // 5 minutes
+            if (isAppInBackground) {
+                stopSelf()
+                exitProcess(0)
+            }
+        }
+    }
+
+    private fun cancelBackgroundTimeout() {
+        backgroundTimeoutJob?.cancel()
+        backgroundTimeoutJob = null
+    }
+
     private fun checkAndNotify() {
         if (!isAppInBackground) return
 
@@ -94,6 +121,7 @@ class BlueBoxService : Service() {
     override fun onDestroy() {
         super.onDestroy()
         updateJob?.cancel()
+        backgroundTimeoutJob?.cancel()
         captorListener.stop()
         serviceScope.cancel()
     }
