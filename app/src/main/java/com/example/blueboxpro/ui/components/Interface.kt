@@ -96,7 +96,7 @@ fun SectionHeader(
         style = MaterialTheme.typography.labelMedium,
         color = color,
         fontWeight = FontWeight.Bold,
-        modifier = modifier.padding(start = 4.dp, bottom = 8.dp, top = 16.dp)
+        modifier = modifier.padding(start = 4.dp, bottom = 8.dp, top = 0.dp)
     )
 }
 

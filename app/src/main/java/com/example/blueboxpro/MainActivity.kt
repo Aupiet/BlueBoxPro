@@ -306,20 +306,18 @@ fun MainScreen(
                 modifier = Modifier.fillMaxHeight(),
                 containerColor = MaterialTheme.colorScheme.surfaceVariant,
                 header = {
-                    Icon(
-                        imageVector = Icons.Default.Info,
-                        contentDescription = "Logo",
-                        modifier = Modifier.size(MainScreenConstants.LOGO_SIZE.dp).padding(vertical = 16.dp),
-                        tint = MaterialTheme.colorScheme.primary
-                    )
+                    // your header (currently empty)
                 }
             ) {
+                // Add a spacer above the items to push them down to the center
+                Spacer(Modifier.weight(1f))
+
                 tabs.forEachIndexed { index, tab ->
                     val isSessionTab = index == MainScreenConstants.SESSION_TAB_INDEX
                     NavigationRailItem(
                         selected = pagerState.currentPage == index,
                         onClick = { onTabSelected(index) },
-                        icon = { 
+                        icon = {
                             if (isSessionTab && isRecording) {
                                 Surface(
                                     modifier = Modifier
@@ -328,13 +326,21 @@ fun MainScreen(
                                     color = Color.Red
                                 ) { }
                             } else {
-                                Icon(tab.icon, contentDescription = stringResource(tab.labelRes), modifier = Modifier.size(MainScreenConstants.ICON_SIZE_DEFAULT.dp))
+                                Icon(
+                                    tab.icon,
+                                    contentDescription = stringResource(tab.labelRes),
+                                    modifier = Modifier.size(MainScreenConstants.ICON_SIZE_DEFAULT.dp)
+                                )
                             }
                         },
                         label = { Text(stringResource(tab.labelRes)) }
                     )
                 }
+
+                // Add a spacer below the items to balance the layout
+                Spacer(Modifier.weight(1f))
             }
+
         }
     } else {
         Scaffold(

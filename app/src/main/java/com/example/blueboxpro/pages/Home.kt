@@ -7,6 +7,7 @@ package com.example.blueboxpro.pages
 
 import android.content.res.Configuration
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
@@ -47,7 +48,7 @@ fun Page1(
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
     val context = LocalContext.current
-    
+
     val sessions = SessionManager.sessions
     val lastSession = sessions.lastOrNull()
     val isRecording = SessionManager.activeRecording != null
@@ -65,51 +66,86 @@ fun Page1(
     val dateFormatter = SimpleDateFormat("EEEE, d MMMM", Locale.getDefault())
     val timeFormatter = SimpleDateFormat("HH:mm", Locale.getDefault())
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .then(if (isLandscape) Modifier else Modifier.verticalScroll(scrollState))
-            .padding(if (isLandscape) 8.dp else HOME_PADDING_MEDIUM),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = if (isLandscape) Arrangement.SpaceEvenly else Arrangement.Top
-    ) {
-        CombinedHeaderCard(
-            dateStr = dateFormatter.format(currentTime),
-            timeStr = timeFormatter.format(currentTime),
-            weatherData = weatherData,
-            result = result,
-            isLandscape = isLandscape
-        )
 
-        Spacer(modifier = Modifier.height(HOME_SPACING_SMALL))
 
-        WindInfoCard(weatherData, unitSystem, isLandscape)
-        
-        Spacer(modifier = Modifier.height(HOME_SPACING_SMALL))
-
-        if (isLandscape) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(HOME_SPACING_MEDIUM),
-                verticalAlignment = Alignment.CenterVertically
+    if (!isLandscape) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .then(if (isLandscape) Modifier else Modifier.verticalScroll(scrollState))
+                .padding(if (isLandscape) 8.dp else HOME_PADDING_MEDIUM),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = if (isLandscape) Arrangement.SpaceEvenly else Arrangement.Top
+        ) {
+            Column(
             ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    SectionHeader(stringResource(R.string.last_session_header))
-                    LastSessionCard(lastSession, isLandscape = true)
-                }
-                Column(modifier = Modifier.weight(1f)) {
-                    SectionHeader(stringResource(R.string.start_new_session_label))
-                    StartRecordingCard(isRecording, sessions.size, context, isLandscape = true)
-                }
+                CombinedHeaderCard(
+                    dateStr = dateFormatter.format(currentTime),
+                    timeStr = timeFormatter.format(currentTime),
+                    weatherData = weatherData,
+                    result = result,
+                    isLandscape = isLandscape
+                )
+
+                Spacer(modifier = Modifier.height(HOME_SPACING_SMALL))
+
+                WindInfoCard(weatherData, unitSystem, isLandscape)
+
+                Spacer(modifier = Modifier.height(HOME_SPACING_SMALL))
             }
-        } else {
-            Spacer(modifier = Modifier.height(HOME_SPACING_LARGE))
-            SectionHeader(stringResource(R.string.last_session_header))
-            LastSessionCard(lastSession)
-            Spacer(modifier = Modifier.height(HOME_SPACING_MEDIUM))
-            StartRecordingCard(isRecording, sessions.size, context)
+
+            Column() {
+
+                Spacer(modifier = Modifier.height(HOME_SPACING_LARGE))
+
+                SectionHeader(stringResource(R.string.last_session_header))
+
+                LastSessionCard(lastSession)
+
+                Spacer(modifier = Modifier.height(HOME_SPACING_MEDIUM))
+
+                StartRecordingCard(isRecording, sessions.size, context)
+            }
         }
     }
+    else{
+        Row() {
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .then(if (isLandscape) Modifier else Modifier.verticalScroll(scrollState))
+                    .padding(if (isLandscape) 8.dp else HOME_PADDING_MEDIUM),
+            ) {
+                CombinedHeaderCard(
+                    dateStr = dateFormatter.format(currentTime),
+                    timeStr = timeFormatter.format(currentTime),
+                    weatherData = weatherData,
+                    result = result,
+                    isLandscape = isLandscape
+                )
+
+                Spacer(modifier = Modifier.height(HOME_SPACING_SMALL))
+
+                WindInfoCard(weatherData, unitSystem, isLandscape)
+
+                Spacer(modifier = Modifier.height(HOME_SPACING_SMALL))
+            }
+
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(8.dp), // simple, consistent landscape padding
+                verticalArrangement = Arrangement.Top
+            ) {
+                SectionHeader(stringResource(R.string.last_session_header), Modifier.padding(top = 0.dp))
+                LastSessionCard(lastSession)
+                Spacer(modifier = Modifier.height(HOME_SPACING_MEDIUM))
+                StartRecordingCard(isRecording, sessions.size, context)
+            }
+        }
+    }
+
+
 }
 
 @Composable
@@ -263,7 +299,7 @@ private fun StartRecordingCard(isRecording: Boolean, sessionCount: Int, context:
         }
         Button(
             onClick = { if (!isRecording) SessionManager.startRecording("Session ${sessionCount + 1}") else SessionManager.stopRecording(context) }, 
-            modifier = if (isLandscape) Modifier.fillMaxWidth().height(48.dp) else Modifier, 
+            modifier = if (isLandscape) Modifier.fillMaxWidth().height(48.dp) else Modifier,
             colors = if (isRecording) ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error) else ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
         ) {
             Text(
