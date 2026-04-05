@@ -51,15 +51,27 @@ import com.example.blueboxpro.Process.WeatherManager
 import com.example.blueboxpro.R
 import com.example.blueboxpro.Save.GpsPoint
 import com.example.blueboxpro.Save.SessionManager
+import org.osmdroid.tileprovider.MapTileProviderBasic
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
+import org.osmdroid.tileprovider.tilesource.XYTileSource
 import org.osmdroid.util.BoundingBox
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.Marker
 import org.osmdroid.views.overlay.Polyline
+import org.osmdroid.events.MapListener
+import org.osmdroid.events.ScrollEvent
+import org.osmdroid.events.ZoomEvent
+import org.osmdroid.views.overlay.ScaleBarOverlay
+import org.osmdroid.views.overlay.TilesOverlay
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.awaitCancellation
 import kotlin.math.cos
 import kotlin.math.min
 import kotlin.math.sin
+import androidx.core.graphics.drawable.toDrawable
 
 /**
  * A standard card container used throughout the app to group information.
@@ -306,17 +318,19 @@ object MapComponents {
         val primaryColor = MaterialTheme.colorScheme.primary; val onSurfaceColor = MaterialTheme.colorScheme.onSurface; val surfaceColor = MaterialTheme.colorScheme.surface; val errorColor = MaterialTheme.colorScheme.error; val textMeasurer = rememberTextMeasurer()
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             Box(modifier = Modifier.fillMaxSize().clip(CircleShape)) {
-                AndroidView(factory = { ctx -> MapView(ctx).apply { setTileSource(TileSourceFactory.MAPNIK); setMultiTouchControls(false); setOnTouchListener { _, _ -> true }; controller.setZoom(DEFAULT_ZOOM_LEVEL); location?.let { controller.setCenter(it) } } },
+                AndroidView(factory = { ctx -> MapView(ctx).apply { setTileSource(TileSourceFactory.MAPNIK); maxZoomLevel = 17.0; setMultiTouchControls(false); setOnTouchListener { _, _ -> true }; controller.setZoom(DEFAULT_ZOOM_LEVEL); location?.let { controller.setCenter(it) } } },
                     update = { mapView ->
-                        mapView.mapOrientation = -animatedCog; mapView.overlays.clear()
+                        mapView.mapOrientation = -animatedCog
+                        mapView.overlays.removeAll { it is Marker || it is Polyline }
                         if (recordingPoints.isNotEmpty()) {
                             val tracePoints = recordingPoints.map { GeoPoint(it.latitude, it.longitude) }
                             mapView.overlays.add(Polyline().apply { setPoints(tracePoints); outlinePaint.color = primaryColor.toArgb(); outlinePaint.strokeWidth = TRACE_LINE_WIDTH })
                         }
                         location?.let { geoPoint ->
-                            mapView.controller.animateTo(geoPoint)
+                            mapView.controller.setCenter(geoPoint)
                             val triangleBitmap = createTriangleBitmap(POSITION_MARKER_SIZE, 0f, primaryColor.toArgb())
-                            mapView.overlays.add(Marker(mapView).apply { position = geoPoint; setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER); icon = BitmapDrawable(mapView.context.resources, triangleBitmap); setInfoWindow(null) })
+                            mapView.overlays.add(Marker(mapView).apply { position = geoPoint; setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER); icon =
+                                triangleBitmap.toDrawable(mapView.context.resources); setInfoWindow(null) })
                         }
                         mapView.invalidate()
                     }, modifier = Modifier.fillMaxSize())
@@ -357,9 +371,175 @@ object MapComponents {
 
     @SuppressLint("ClickableViewAccessibility")
     @Composable
-    fun MapContainer(location: GeoPoint?, modifier: Modifier = Modifier, zoomLevel: Double = DEFAULT_ZOOM_LEVEL, isLocked: Boolean = true, autoCenter: Boolean = true) {
-        val positionLabel = stringResource(R.string.marker_position); val primaryColor = MaterialTheme.colorScheme.primary
-        AndroidView(factory = { ctx -> MapView(ctx).apply { setTileSource(TileSourceFactory.MAPNIK); setMultiTouchControls(!isLocked); if (isLocked) setOnTouchListener { _, _ -> true }; controller.setZoom(zoomLevel); location?.let { controller.setCenter(it) } } }, update = { mapView -> location?.let { geoPoint -> if (autoCenter) mapView.controller.animateTo(geoPoint); mapView.overlays.clear(); val marker = Marker(mapView).apply { position = geoPoint; setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM); title = positionLabel }; mapView.overlays.add(marker); mapView.invalidate() } }, modifier = modifier)
+    fun MapContainer(
+        location: GeoPoint?,
+        modifier: Modifier = Modifier,
+        zoomLevel: Double = DEFAULT_ZOOM_LEVEL,
+        isLocked: Boolean = true,
+        recenterTrigger: Int = 0,
+        showTopoLayer: Boolean = false,
+        showPrecipLayer: Boolean = false,
+        showWindLayer: Boolean = false
+    ) {
+        val positionLabel = stringResource(R.string.marker_position)
+        val topoInfo = remember { WeatherManager.topoLayerInfo }
+
+        // Keep references to MapView and overlay instances for proper lifecycle
+        var mapViewRef by remember { mutableStateOf<MapView?>(null) }
+        var topoOverlayRef by remember { mutableStateOf<TilesOverlay?>(null) }
+        var precipOverlayRef by remember { mutableStateOf<TilesOverlay?>(null) }
+        var windOverlayRef by remember { mutableStateOf<WindOverlay?>(null) }
+
+        // Recenter without recreating the MapView
+        LaunchedEffect(recenterTrigger) {
+            if (recenterTrigger > 0) {
+                location?.let { mapViewRef?.controller?.animateTo(it) }
+            }
+        }
+
+        // --- Topo overlay: add/remove by tracked reference ---
+        LaunchedEffect(showTopoLayer, mapViewRef) {
+            val mv = mapViewRef ?: return@LaunchedEffect
+            // Always remove the old overlay if it exists
+            topoOverlayRef?.let { mv.overlays.remove(it) }
+            topoOverlayRef = null
+            if (showTopoLayer) {
+                val source = XYTileSource(
+                    topoInfo.name, topoInfo.minZoom, topoInfo.maxZoom,
+                    topoInfo.tileSize, topoInfo.extension, topoInfo.baseUrls
+                )
+                val provider = MapTileProviderBasic(mv.context, source)
+                val overlay = TilesOverlay(provider, mv.context)
+                mv.overlays.add(0, overlay)
+                topoOverlayRef = overlay
+            }
+            mv.invalidate()
+        }
+
+        // --- Precip overlay: fetch RainViewer URL, add/remove by tracked reference ---
+        LaunchedEffect(showPrecipLayer, mapViewRef) {
+            val mv = mapViewRef ?: return@LaunchedEffect
+            // Always remove the old overlay if it exists
+            precipOverlayRef?.let { mv.overlays.remove(it) }
+            precipOverlayRef = null
+            if (showPrecipLayer) {
+                val tileBase = WeatherManager.fetchRainViewerTileBase()
+                if (tileBase != null) {
+                    val info = WeatherManager.buildPrecipLayerInfo(tileBase)
+                    val source = XYTileSource(
+                        info.name, info.minZoom, info.maxZoom,
+                        info.tileSize, info.extension, info.baseUrls
+                    )
+                    val provider = MapTileProviderBasic(mv.context, source)
+                    val overlay = TilesOverlay(provider, mv.context)
+                    overlay.loadingBackgroundColor = android.graphics.Color.TRANSPARENT
+                    overlay.loadingLineColor = android.graphics.Color.TRANSPARENT
+                    mv.overlays.add(overlay)
+                    precipOverlayRef = overlay
+                }
+            }
+            mv.invalidate()
+        }
+
+        // --- Wind overlay: tracks map position + fetch ---
+        LaunchedEffect(showWindLayer, mapViewRef) {
+            val mv = mapViewRef ?: return@LaunchedEffect
+            windOverlayRef?.let { mv.overlays.remove(it) }
+            windOverlayRef = null
+
+            if (showWindLayer) {
+                val overlay = WindOverlay()
+                mv.overlays.add(overlay)
+                windOverlayRef = overlay
+
+                var fetchJob: Job? = null
+
+                val listener = object : MapListener {
+                    override fun onScroll(event: ScrollEvent?): Boolean { triggerFetch(); return false }
+                    override fun onZoom(event: ZoomEvent?): Boolean { triggerFetch(); return false }
+
+                    fun triggerFetch() {
+                        fetchJob?.cancel()
+                        fetchJob = launch {
+                            delay(500) // Debounce
+                            val bbox = mv.boundingBox ?: return@launch
+                            
+                            val visualDensity = com.example.blueboxpro.Option.UI.windDensity
+                            val targetCols = visualDensity
+                            val targetRows = (visualDensity * 1.2).toInt() // Keeps approximate aspect ratio for mobile screen
+                            
+                            // Fetch a low-density 6x7 grid from the API for performance and rate limits
+                            val apiCols = 6
+                            val apiRows = 7
+                            
+                            val rawVectors = WeatherManager.fetchWindGrid(
+                                bbox.latSouth, bbox.latNorth,
+                                bbox.lonWest, bbox.lonEast,
+                                apiCols, apiRows
+                            )
+                            
+                            // Interpolate for smooth visuals at user-defined density
+                            val denseVectors = WeatherManager.interpolateWindGrid(
+                                rawVectors,
+                                bbox.latSouth, bbox.latNorth,
+                                bbox.lonWest, bbox.lonEast,
+                                targetCols, targetRows
+                            )
+                            
+                            overlay.updateVectors(denseVectors)
+                            mv.invalidate()
+                        }
+                    }
+                }
+                mv.addMapListener(listener)
+                listener.triggerFetch()
+
+                try {
+                    awaitCancellation()
+                } finally {
+                    mv.removeMapListener(listener)
+                    mv.overlays.remove(overlay)
+                    mv.invalidate()
+                }
+            }
+        }
+
+        AndroidView(
+            factory = { ctx ->
+                MapView(ctx).apply {
+                    setTileSource(TileSourceFactory.MAPNIK)
+                    maxZoomLevel = 17.0
+                    setMultiTouchControls(!isLocked)
+                    if (isLocked) setOnTouchListener { _, _ -> true }
+                    controller.setZoom(zoomLevel)
+                    location?.let { controller.setCenter(it) }
+                    mapViewRef = this
+                    // Scale bar
+                    overlays.add(ScaleBarOverlay(this).apply {
+                        setCentred(true)
+                        setAlignBottom(true)
+                    })
+                }
+            },
+            update = { mapView ->
+                mapViewRef = mapView
+                // Only remove markers (position), keep tile overlays and scale bar stable
+                mapView.overlays.removeAll { it is Marker }
+
+                // --- Position marker ---
+                location?.let { geoPoint ->
+                    if (recenterTrigger == 0) mapView.controller.setCenter(geoPoint)
+                    val marker = Marker(mapView).apply {
+                        position = geoPoint
+                        setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
+                        title = positionLabel
+                    }
+                    mapView.overlays.add(marker)
+                }
+                mapView.invalidate()
+            },
+            modifier = modifier
+        )
     }
 
     @SuppressLint("ClickableViewAccessibility")

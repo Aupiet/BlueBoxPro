@@ -134,4 +134,15 @@
     <string name="content_desc_back">Back</string>
     <string name="content_desc_recenter">Recenter</string>
     <string name="content_desc_delete">Delete</string>
+
+    <!-- Map Layers -->
+    <string name="layer_topo">Topo</string>
+    <string name="layer_precip">Precip</string>
+    <string name="layer_wind">Wind</string>
+    
+    <string name="desc_wind_density">Number of vectorial arrows on the map</string>
+    <string name="label_wind_density">Wind density</string>
+
+    <string name="label_wind_arrow_size">Wind Arrow Size</string>
+    <string name="desc_wind_arrow_size">Scale factor for arrow rendering (default: 1.0)</string>
 </resources>
