@@ -1,12 +1,18 @@
 /**
  * Main entry point of the BlueBoxPro application.
- * This activity sets up the navigation, theme, and global sensor listeners.
+ * This activity sets up the navigation, theme, and manages the background service.
  */
 package com.example.blueboxpro
 
 import android.Manifest
+import android.content.ComponentName
+import android.content.Context
+import android.content.Intent
+import android.content.ServiceConnection
 import android.content.res.Configuration as AndroidConfiguration
+import android.os.Build
 import android.os.Bundle
+import android.os.IBinder
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -42,7 +48,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import com.example.blueboxpro.Process.CaptorListener
+import com.example.blueboxpro.Process.BlueBoxService
 import com.example.blueboxpro.Process.MovementProcessor
 import com.example.blueboxpro.Process.WeatherData
 import com.example.blueboxpro.Process.WeatherManager
@@ -65,6 +71,23 @@ class MainActivity : AppCompatActivity() {
         private const val INITIAL_REFRESH_TRIGGER = 0
     }
 
+    private var blueBoxService: BlueBoxService? = null
+    private var isBound by mutableStateOf(false)
+
+    private val connection = object : ServiceConnection {
+        override fun onServiceConnected(className: ComponentName, service: IBinder) {
+            val binder = service as BlueBoxService.LocalBinder
+            blueBoxService = binder.getService()
+            isBound = true
+            blueBoxService?.isAppInBackground = false
+        }
+
+        override fun onServiceDisconnected(arg0: ComponentName) {
+            isBound = false
+            blueBoxService = null
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         Option.load(this)
@@ -72,6 +95,16 @@ class MainActivity : AppCompatActivity() {
         SessionManager.loadSessions(this)
         enableEdgeToEdge()
         WindowCompat.setDecorFitsSystemWindows(window, false)
+
+        // Start and bind the service
+        Intent(this, BlueBoxService::class.java).also { intent ->
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                startForegroundService(intent)
+            } else {
+                startService(intent)
+            }
+            bindService(intent, connection, Context.BIND_AUTO_CREATE)
+        }
 
         setContent {
             val context = LocalContext.current
@@ -84,36 +117,36 @@ class MainActivity : AppCompatActivity() {
             var unitAltitude by rememberSaveable { mutableStateOf(Option.UI.unitAltitude) }
             var unitAngle by rememberSaveable { mutableStateOf(Option.UI.unitAngle) }
 
-            val processor = remember { MovementProcessor() }
+            // Use the processor from the service if bound, otherwise a fallback
+            val processor = blueBoxService?.processor ?: remember { MovementProcessor() }
+            
             var lastLocationState by remember { mutableStateOf<GeoPoint?>(null) }
             var refreshTrigger by remember { mutableStateOf(INITIAL_REFRESH_TRIGGER) }
             
             // Global Weather State
             var weatherData by remember { mutableStateOf<WeatherData?>(null) }
 
-            val captorListener = remember {
-                CaptorListener(context, processor) {
-                    lastLocationState = processor.lastLocation
-                    refreshTrigger++
-                }
+            // Sync weather data to service for notification
+            LaunchedEffect(weatherData) {
+                blueBoxService?.lastWeatherData = weatherData
             }
 
-            LaunchedEffect(refreshTrigger) {
-                SessionManager.updateRecording(processor)
+            // Polling for UI updates since we are bound to a background processor
+            LaunchedEffect(isBound) {
+                while (true) {
+                    lastLocationState = processor.lastLocation
+                    refreshTrigger++
+                    kotlinx.coroutines.delay(500) // UI refresh rate
+                }
             }
             
             // Fetch weather when location changes
             LaunchedEffect(lastLocationState) {
                 lastLocationState?.let { geoPoint ->
-                    if (weatherData == null) { // Fetch once or update occasionally
+                    if (weatherData == null) {
                         weatherData = WeatherManager.fetchWeather(geoPoint.latitude, geoPoint.longitude)
                     }
                 }
-            }
-
-            DisposableEffect(Unit) {
-                captorListener.start()
-                onDispose { captorListener.stop() }
             }
 
             val permissionLauncher = rememberLauncherForActivityResult(
@@ -121,7 +154,14 @@ class MainActivity : AppCompatActivity() {
             ) { }
 
             LaunchedEffect(Unit) {
-                permissionLauncher.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION))
+                val permissions = mutableListOf(
+                    Manifest.permission.ACCESS_FINE_LOCATION, 
+                    Manifest.permission.ACCESS_COARSE_LOCATION
+                )
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    permissions.add(Manifest.permission.POST_NOTIFICATIONS)
+                }
+                permissionLauncher.launch(permissions.toTypedArray())
             }
 
             val currentPalette = try { ThemePalette.valueOf(themePaletteKey) } catch(e: Exception) { ThemePalette.OCEAN }
@@ -155,13 +195,15 @@ class MainActivity : AppCompatActivity() {
                             onUnitSpeedChange = { newUnit ->
                                 unitSpeed = newUnit
                                 Option.UI.unitSpeed = newUnit
-                                Option.UI.unitSystem = when(newUnit) {
+                                val system = when(newUnit) {
                                     "km/h" -> "METRIC_KMH"
                                     "m/s" -> "METRIC_MS"
                                     "mph" -> "IMPERIAL"
                                     "kn" -> "NAUTICAL"
                                     else -> "METRIC_KMH"
                                 }
+                                Option.UI.unitSystem = system
+                                blueBoxService?.unitSystem = system
                                 Option.save(this@MainActivity) 
                             },
                             onUnitDistanceChange = { unitDistance = it; Option.UI.unitDistance = it; Option.save(this@MainActivity) },
@@ -201,8 +243,27 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    override fun onResume() {
+        super.onResume()
+        blueBoxService?.isAppInBackground = false
+    }
+
+    override fun onPause() {
+        super.onPause()
+        blueBoxService?.isAppInBackground = true
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        if (isBound) {
+            unbindService(connection)
+            isBound = false
+        }
+        SessionManager.saveSessions(this)
+        Option.save(this)
+    }
+
     override fun onStop() { super.onStop(); SessionManager.saveSessions(this); Option.save(this) }
-    override fun onDestroy() { super.onDestroy(); SessionManager.saveSessions(this); Option.save(this) }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)

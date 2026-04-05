@@ -42,6 +42,7 @@ object Option {
         val distanceThresholdMeters: Double = 3.0,
         val recordingFrequencyHz: Float = 1.0f,
         val maxLogicalSpeedKmh: Double = 300.0,
+        val notificationIntervalMs: Long = 10000L,
         // UI Preferences
         val isDarkMode: Boolean = false,
         val themePalette: String = "OCEAN",
@@ -144,6 +145,8 @@ object Option {
         
         // Backward compatibility
         var unitSystem = App.DEFAULT_UNIT_SYSTEM
+        
+        var notificationIntervalMs = 10000L
     }
 
     /**
@@ -169,6 +172,7 @@ object Option {
             distanceThresholdMeters = Save.DISTANCE_THRESHOLD_METERS,
             recordingFrequencyHz = Save.RECORDING_FREQUENCY_HZ,
             maxLogicalSpeedKmh = Save.MAX_LOGICAL_SPEED_KMH,
+            notificationIntervalMs = UI.notificationIntervalMs,
             isDarkMode = UI.isDarkMode,
             themePalette = UI.themePalette,
             language = UI.language,
@@ -223,6 +227,7 @@ object Option {
             UI.unitDistance = data.unitDistance
             UI.unitAltitude = data.unitAltitude
             UI.unitAngle = data.unitAngle
+            UI.notificationIntervalMs = data.notificationIntervalMs
             
             // Sync unitSystem for legacy code
             UI.unitSystem = when (UI.unitSpeed) {
