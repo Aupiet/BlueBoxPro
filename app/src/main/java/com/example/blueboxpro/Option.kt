@@ -52,7 +52,9 @@ object Option {
         val unitAltitude: String = "m",
         val unitAngle: String = "°",
         val windDensity: Int = 15,
-        val windArrowSize: Float = 1.0f
+        val windArrowSize: Float = 1.0f,
+        val windCacheTtlMinutes: Int = 10,
+        val windMinZoom: Int = 2
     )
 
     /**
@@ -151,6 +153,8 @@ object Option {
         var notificationIntervalMs = 10000L
         var windDensity = 15
         var windArrowSize = 1.0f
+        var windCacheTtlMinutes = 10
+        var windMinZoom = 2
     }
 
     /**
@@ -185,7 +189,9 @@ object Option {
             unitAltitude = UI.unitAltitude,
             unitAngle = UI.unitAngle,
             windDensity = UI.windDensity,
-            windArrowSize = UI.windArrowSize
+            windArrowSize = UI.windArrowSize,
+            windCacheTtlMinutes = UI.windCacheTtlMinutes,
+            windMinZoom = UI.windMinZoom
         )
         try {
             val jsonString = json.encodeToString(data)
@@ -236,6 +242,8 @@ object Option {
             UI.notificationIntervalMs = data.notificationIntervalMs
             UI.windDensity = data.windDensity
             UI.windArrowSize = data.windArrowSize
+            UI.windCacheTtlMinutes = data.windCacheTtlMinutes
+            UI.windMinZoom = data.windMinZoom
             
             // Sync unitSystem for legacy code
             UI.unitSystem = when (UI.unitSpeed) {

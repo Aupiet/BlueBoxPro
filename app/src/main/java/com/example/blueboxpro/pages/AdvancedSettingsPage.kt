@@ -64,6 +64,8 @@ fun AdvancedSettingsPage(
     
     var windDensity by remember { mutableStateOf(Option.UI.windDensity.toString()) }
     var windArrowSize by remember { mutableStateOf(Option.UI.windArrowSize.toString()) }
+    var windCacheTtlMinutes by remember { mutableStateOf(Option.UI.windCacheTtlMinutes.toString()) }
+    var windMinZoom by remember { mutableStateOf(Option.UI.windMinZoom.toString()) }
 
     Scaffold(
         topBar = {
@@ -99,6 +101,8 @@ fun AdvancedSettingsPage(
                             
                             Option.UI.windDensity = windDensity.toIntOrNull() ?: 15
                             Option.UI.windArrowSize = windArrowSize.toFloatOrNull() ?: 1.0f
+                            Option.UI.windCacheTtlMinutes = windCacheTtlMinutes.toIntOrNull() ?: 10
+                            Option.UI.windMinZoom = windMinZoom.toIntOrNull() ?: 5
                             
                             // Persist to storage
                             Option.save(context)
@@ -209,6 +213,20 @@ fun AdvancedSettingsPage(
                 value = windArrowSize,
                 onValueChange = { windArrowSize = it },
                 description = stringResource(R.string.desc_wind_arrow_size)
+            )
+            SettingField(
+                label = stringResource(R.string.label_wind_ttl),
+                value = windCacheTtlMinutes,
+                onValueChange = { windCacheTtlMinutes = it },
+                description = stringResource(R.string.desc_wind_ttl),
+                isInteger = true
+            )
+            SettingField(
+                label = stringResource(R.string.label_wind_min_zoom),
+                value = windMinZoom,
+                onValueChange = { windMinZoom = it },
+                description = stringResource(R.string.desc_wind_min_zoom),
+                isInteger = true
             )
 
             HorizontalDivider(modifier = Modifier.padding(vertical = SPACING_MEDIUM))

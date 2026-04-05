@@ -464,26 +464,25 @@ object MapComponents {
                             delay(500) // Debounce
                             val bbox = mv.boundingBox ?: return@launch
                             
+                            val logicZoom = mv.zoomLevelDouble
+                            val minZoom = com.example.blueboxpro.Option.UI.windMinZoom
+                            
+                            if (logicZoom < minZoom) {
+                                overlay.clear()
+                                mv.invalidate()
+                                return@launch
+                            }
+                            
                             val visualDensity = com.example.blueboxpro.Option.UI.windDensity
-                            val targetCols = visualDensity
-                            val targetRows = (visualDensity * 1.2).toInt() // Keeps approximate aspect ratio for mobile screen
+                            val ttl = com.example.blueboxpro.Option.UI.windCacheTtlMinutes
                             
-                            // Fetch a low-density 6x7 grid from the API for performance and rate limits
-                            val apiCols = 6
-                            val apiRows = 7
-                            
-                            val rawVectors = WeatherManager.fetchWindGrid(
-                                bbox.latSouth, bbox.latNorth,
-                                bbox.lonWest, bbox.lonEast,
-                                apiCols, apiRows
-                            )
-                            
-                            // Interpolate for smooth visuals at user-defined density
-                            val denseVectors = WeatherManager.interpolateWindGrid(
-                                rawVectors,
-                                bbox.latSouth, bbox.latNorth,
-                                bbox.lonWest, bbox.lonEast,
-                                targetCols, targetRows
+                            val denseVectors = WindChunkManager.getVisibleWindVectors(
+                                bbox = bbox,
+                                actualZoom = logicZoom,
+                                ttlMinutes = ttl,
+                                apiDensityCols = 3,
+                                apiDensityRows = 3,
+                                visualDensity = visualDensity
                             )
                             
                             overlay.updateVectors(denseVectors)
