@@ -42,7 +42,8 @@ object NotificationHelper {
         context: Context,
         speed: String = "--",
         heading: String = "--",
-        wind: String = "--"
+        wind: String = "--",
+        isRecording: Boolean = false
     ): Notification {
         val intent = Intent(context, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_SINGLE_TOP
@@ -55,12 +56,13 @@ object NotificationHelper {
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
 
+        val contentTitle = if (isRecording) "BlueBox Pro - Enregistrement..." else "BlueBox Pro - En cours"
         val contentText = "Vitesse: $speed | Cap: $heading | Vent: $wind"
 
         return NotificationCompat.Builder(context, CHANNEL_ID)
-            .setContentTitle("BlueBox Pro - En cours")
+            .setContentTitle(contentTitle)
             .setContentText(contentText)
-            .setSmallIcon(android.R.drawable.ic_menu_mylocation) 
+            .setSmallIcon(if (isRecording) android.R.drawable.ic_media_play else android.R.drawable.ic_menu_mylocation) 
             .setContentIntent(pendingIntent)
             .setOngoing(true)
             .setOnlyAlertOnce(true)
@@ -71,8 +73,8 @@ object NotificationHelper {
     /**
      * Updates an existing notification.
      */
-    fun updateNotification(context: Context, speed: String, heading: String, wind: String) {
+    fun updateNotification(context: Context, speed: String, heading: String, wind: String, isRecording: Boolean) {
         val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        manager.notify(NOTIFICATION_ID, buildNotification(context, speed, heading, wind))
+        manager.notify(NOTIFICATION_ID, buildNotification(context, speed, heading, wind, isRecording))
     }
 }
