@@ -121,4 +121,11 @@
     <string name="content_desc_back">Retour</string>
     <string name="content_desc_recenter">Recentrer</string>
     <string name="content_desc_delete">Supprimer</string>
+
+    <!-- Map Layer Tags -->
+    <string name="layer_topo">Topo</string>
+    <string name="layer_precip">Précip.</string>
+    <string name="layer_wind">Vent</string>
+    <string name="desc_wind_density">Nombre de Flèche Vectotiel</string>
+    <string name="label_wind_density">Wind density\n</string>
 </resources>

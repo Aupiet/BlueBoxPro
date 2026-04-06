@@ -134,4 +134,21 @@
     <string name="content_desc_back">Back</string>
     <string name="content_desc_recenter">Recenter</string>
     <string name="content_desc_delete">Delete</string>
+
+    <!-- Map Layers -->
+    <string name="layer_topo">Topo</string>
+    <string name="layer_precip">Precip</string>
+    <string name="layer_wind">Wind</string>
+    
+    <string name="desc_wind_density">Number of vectorial arrows on the map</string>
+    <string name="label_wind_density">Wind density</string>
+
+    <string name="label_wind_arrow_size">Wind Arrow Size</string>
+    <string name="desc_wind_arrow_size">Scale factor for arrow rendering (default: 1.0)</string>
+
+    <string name="label_wind_ttl">Wind Cache TTL (min)</string>
+    <string name="desc_wind_ttl">Time to live for cached wind chunks (default: 10)</string>
+
+    <string name="label_wind_min_zoom">Min Zoom Level</string>
+    <string name="desc_wind_min_zoom">Minimum map zoom required to display wind arrows</string>
 </resources>
