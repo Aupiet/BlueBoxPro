@@ -59,6 +59,7 @@ import com.example.blueboxpro.ui.theme.ThemePalette
 import kotlinx.coroutines.launch
 import org.osmdroid.config.Configuration
 import org.osmdroid.util.GeoPoint
+import androidx.compose.ui.res.painterResource
 
 class MainActivity : AppCompatActivity() {
     companion object {
@@ -310,14 +311,15 @@ fun MainScreen(
 
     val topBar = @Composable {
         TopAppBar(
-            title = { 
+            title = {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
-                        imageVector = Icons.Default.Info, 
+                        painter = painterResource(id = R.drawable.ic_launcher_bluebox_round),
                         contentDescription = "Logo",
-                        modifier = Modifier.size(24.dp).padding(end = 8.dp)
+                        modifier = Modifier.size(48.dp).padding(end = 16.dp),
+                        tint = Color.Unspecified
                     )
-                    Text(stringResource(tabs[pagerState.currentPage].labelRes)) 
+                    Text(stringResource(tabs[pagerState.currentPage].labelRes))
                 }
             }
         )

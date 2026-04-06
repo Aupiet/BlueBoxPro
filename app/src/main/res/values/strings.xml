@@ -27,7 +27,21 @@
     <string name="lang_french" translatable="false">Français</string>
     <string name="lang_english" translatable="false">English</string>
     <string name="advanced_settings">Advanced Settings</string>
-    <string name="version_pre_alpha">Version Pre Alpha</string>
+    <string name="version_pre_alpha">Version Pre-Alpha</string>
+
+    <!-- Movement / Dashboard Labels -->
+    <string name="label_latitude">Latitude</string>
+    <string name="label_longitude">Longitude</string>
+    <string name="label_altitude_short">Alt</string>
+    <string name="label_sog_with_unit">SOG (%1$s)</string>
+    <string name="label_wind_speed_with_unit">WIND (%1$s)</string>
+    <string name="label_direction_deg">DIR. (°)</string>
+    <string name="label_temp_celsius">TEMP (°C)</string>
+    <string name="label_pitch_deg">PITCH (°)</string>
+    <string name="label_roll_deg">ROLL (°)</string>
+    <string name="label_wind">WIND</string>
+    <string name="label_direction">DIRECTION</string>
+    <string name="weather_waiting">Waiting for data...</string>
 
     <!-- Page 1 (Movement Analysis / Home) -->
     <string name="movement_analysis_title">Movement Analysis</string>
@@ -107,17 +121,17 @@
     <string name="label_min_gps_accuracy">Min GPS Accuracy (m)</string>
     <string name="desc_min_gps_accuracy">Threshold beyond which GPS data is ignored.</string>
     <string name="label_azimuth_alpha">Azimuth Smoothing (Alpha)</string>
-    <string name="desc_azimuth_alpha">Smoothing factor for compass (0.0 to 1.0). Lower = stable but slower.</string>
+    <string name="desc_azimuth_alpha">Smoothing factor for compass (0.0 to 1.0). Lower = more stable but slower.</string>
     <string name="label_speed_hist_size">Speed History Size</string>
     <string name="desc_speed_hist_size">Number of points used for real-time average calculation.</string>
     
     <!-- New Advanced Settings -->
     <string name="label_zupt_speed">ZUPT Speed Threshold</string>
-    <string name="desc_zupt_speed">Speed below which the device is considered stationary.</string>
+    <string name="desc_zupt_speed">Speed below which the device is considered stationary for IMU filters.</string>
     <string name="label_max_dt">Max Delta Time (s)</string>
-    <string name="desc_max_dt">Maximum time gap between sensor updates.</string>
+    <string name="desc_max_dt">Maximum time gap allowed between sensor updates.</string>
     <string name="label_max_logical_speed">Max Logical Speed</string>
-    <string name="desc_max_logical_speed">Speeds above this value are ignored as outliers.</string>
+    <string name="desc_max_logical_speed">Speeds above this value are ignored as outliers (low-pass filter).</string>
 
     <string name="header_calc_display">Calculation &amp; Display</string>
     <string name="label_rounding_factor">Rounding Factor</string>
@@ -140,14 +154,14 @@
     <string name="layer_precip">Precip</string>
     <string name="layer_wind">Wind</string>
     
-    <string name="desc_wind_density">Number of vectorial arrows on the map</string>
+    <string name="desc_wind_density">Density of wind arrows on the map.</string>
     <string name="label_wind_density">Wind density</string>
 
     <string name="label_wind_arrow_size">Wind Arrow Size</string>
     <string name="desc_wind_arrow_size">Scale factor for arrow rendering (default: 1.0)</string>
 
     <string name="label_wind_ttl">Wind Cache TTL (min)</string>
-    <string name="desc_wind_ttl">Time to live for cached wind chunks (default: 10)</string>
+    <string name="desc_wind_ttl">Time to live for cached wind data (default: 10)</string>
 
     <string name="label_wind_min_zoom">Min Zoom Level</string>
     <string name="desc_wind_min_zoom">Minimum map zoom required to display wind arrows</string>

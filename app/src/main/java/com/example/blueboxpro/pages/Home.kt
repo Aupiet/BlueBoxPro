@@ -179,7 +179,7 @@ private fun WindInfoCard(
                 horizontalArrangement = Arrangement.SpaceAround
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(text = "VENT", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onTertiaryContainer)
+                    Text(text = stringResource(R.string.label_wind), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onTertiaryContainer)
                     Text(
                         text = "%.1f %s".format(convertedWindSpeed, speedUnit), 
                         style = MaterialTheme.typography.titleMedium, 
@@ -190,7 +190,7 @@ private fun WindInfoCard(
                 }
 
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(text = "DIRECTION", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onTertiaryContainer)
+                    Text(text = stringResource(R.string.label_direction), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onTertiaryContainer)
                     Text(
                         text = "%.0f°".format(windDir), 
                         style = MaterialTheme.typography.titleMedium, 
@@ -201,7 +201,7 @@ private fun WindInfoCard(
             }
         } else {
             Box(modifier = Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) {
-                Text(text = "VENT : En attente...", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.6f))
+                Text(text = stringResource(R.string.weather_waiting), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.6f))
             }
         }
     }
@@ -225,7 +225,7 @@ private fun CombinedHeaderCard(
             val description = WeatherManager.getWeatherDescription(weatherData.currentWeather.weatherCode)
             "$description, ${weatherData.currentWeather.temperature.toInt()}°C"
         } else {
-            "En attente..."
+            stringResource(R.string.weather_waiting)
         }
         
         Text(
@@ -238,7 +238,7 @@ private fun CombinedHeaderCard(
         
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(text = "SOG", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSecondaryContainer)
+                Text(text = stringResource(R.string.label_sog), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSecondaryContainer)
                 Text(
                     text = "%.1f %s".format(result.getSog(), result.getSpeedUnit()), 
                     style = if (isLandscape) MaterialTheme.typography.titleLarge else MaterialTheme.typography.headlineMedium, 
@@ -247,7 +247,7 @@ private fun CombinedHeaderCard(
                 )
             }
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(text = "COG", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSecondaryContainer)
+                Text(text = stringResource(R.string.label_cog), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSecondaryContainer)
                 Text(
                     text = "%.0f°".format(result.getCog()), 
                     style = if (isLandscape) MaterialTheme.typography.titleLarge else MaterialTheme.typography.headlineMedium, 

@@ -10,7 +10,15 @@
     <!-- Settings Page -->
     <string name="settings_title">Paramètres</string>
     <string name="dark_mode">Mode Sombre</string>
-    <string name="unit_system_title">Unités de mesure</string>
+    <string name="theme_section">Apparence</string>
+    <string name="palette_label">Palette du thème</string>
+    <string name="metrics_section">Mesures &amp; Unités</string>
+    <string name="unit_speed_label">Vitesse</string>
+    <string name="unit_distance_label">Distance</string>
+    <string name="unit_altitude_label">Altitude</string>
+    <string name="unit_angle_label">Angle</string>
+
+    <string name="unit_system_title">Système d\'unités</string>
     <string name="unit_metric_kmh">Métrique (km/h, m)</string>
     <string name="unit_metric_ms">Métrique (m/s, m)</string>
     <string name="unit_imperial">Impérial (mph, ft)</string>
@@ -19,16 +27,35 @@
     <string name="lang_french" translatable="false">Français</string>
     <string name="lang_english" translatable="false">English</string>
     <string name="advanced_settings">Paramètres Avancés</string>
-    <string name="version_pre_alpha">Version Pre Alpha</string>
+    <string name="version_pre_alpha">Version Pre-Alpha</string>
 
-    <!-- Page 1 (Movement Analysis) -->
+    <!-- Movement / Dashboard Labels -->
+    <string name="label_latitude">Latitude</string>
+    <string name="label_longitude">Longitude</string>
+    <string name="label_altitude_short">Alt</string>
+    <string name="label_sog_with_unit">SOG (%1$s)</string>
+    <string name="label_wind_speed_with_unit">VENT (%1$s)</string>
+    <string name="label_direction_deg">DIR. (°)</string>
+    <string name="label_temp_celsius">TEMP (°C)</string>
+    <string name="label_pitch_deg">TANGAGE (°)</string>
+    <string name="label_roll_deg">ROULIS (°)</string>
+    <string name="label_wind">VENT</string>
+    <string name="label_direction">DIRECTION</string>
+    <string name="weather_waiting">En attente...</string>
+
+    <!-- Page 1 (Movement Analysis / Home) -->
     <string name="movement_analysis_title">Analyse de mouvement</string>
     <string name="sog_label">SOG (Vitesse fond)</string>
     <string name="cog_label">COG (Route fond)</string>
-    <string name="compass_label">Boussole (Orientation)</string>
+    <string name="compass_label">Boussole (Cap)</string>
     <string name="technical_details">Détails techniques :</string>
     <string name="average_label">Moyenne :</string>
+    <string name="gps_label" translatable="false">GPS :</string>
+    <string name="imu_label" translatable="false">IMU :</string>
     <string name="reset_button">Réinitialiser</string>
+    <string name="last_session_header">Dernière session</string>
+    <string name="recording_in_progress">Enregistrement en cours</string>
+    <string name="start_new_session_label">Démarrer une nouvelle session</string>
 
     <!-- Page 2 (Map/Navigation) -->
     <string name="map_title">Navigation Carte</string>
@@ -38,6 +65,11 @@
     <string name="label_lat">Lat</string>
     <string name="label_lon">Lon</string>
     <string name="label_alt">Alt</string>
+    <string name="marker_start">Départ</string>
+    <string name="marker_end">Arrivée</string>
+    <string name="marker_position">Position</string>
+    <string name="marker_point_format">Point n°%1$d</string>
+    <string name="marker_snippet_format">SOG : %1$.1f %2$s | COG : %3$.0f°</string>
 
     <!-- Page 3 (Recording) -->
     <string name="recording_title">Enregistrement de Course</string>
@@ -77,8 +109,8 @@
     <string name="button_save">ENREGISTRER</string>
     <string name="maintenance_actions">Actions de maintenance</string>
     <string name="reset_description">Réinitialise tous les états internes, filtres et positionnement.</string>
-    <string name="header_realtime_tech">Détails Techniques (Temps Réel)</string>
-    <string name="label_filtered_avg">Moyenne (Filtrée)</string>
+    <string name="header_realtime_tech">Détails techniques (Temps réel)</string>
+    <string name="label_filtered_avg">Moyenne filtrée</string>
     <string name="label_gps_source">Source GPS</string>
     <string name="label_imu_source">Source IMU (Accéléro)</string>
     <string name="header_processing_gps">Traitement &amp; GPS</string>
@@ -92,40 +124,43 @@
     <string name="desc_speed_hist_size">Nombre de points utilisés pour calculer la vitesse moyenne en temps réel.</string>
     
     <!-- New Advanced Settings -->
-    <string name="label_zupt_speed">Seuil vitesse ZUPT (m/s)</string>
-    <string name="desc_zupt_speed">Seuil sous lequel l\'IMU considère l\'arrêt si l\'accélération est proche de zéro.</string>
-    <string name="label_max_dt">DT max arrière-plan (s)</string>
-    <string name="desc_max_dt">Intervalle de temps maximum appliqué à un groupe de capteurs en arrière-plan.</string>
-    <string name="label_max_logical_speed">Vitesse logique max (km/h)</string>
-    <string name="desc_max_logical_speed">Ignore les points nécessitant de voyager plus vite que cette vitesse (filtre passe-bas).</string>
+    <string name="label_zupt_speed">Seuil de vitesse ZUPT (m/s)</string>
+    <string name="desc_zupt_speed">Vitesse sous laquelle l\'appareil est considéré comme stationnaire pour les filtres IMU.</string>
+    <string name="label_max_dt">Intervalle de temps max (s)</string>
+    <string name="desc_max_dt">Écart de temps maximum autorisé entre les mises à jour des capteurs.</string>
+    <string name="label_max_logical_speed">Vitesse logique max</string>
+    <string name="desc_max_logical_speed">Les vitesses dépassant cette valeur sont ignorées car considérées comme aberrantes.</string>
 
     <string name="header_calc_display">Calculs &amp; Affichage</string>
     <string name="label_rounding_factor">Facteur d\'arrondi</string>
-    <string name="desc_rounding_factor">10 = 1 décale, 100 = 2 décimales. Définit la précision de l\'affichage.</string>
+    <string name="desc_rounding_factor">10 = 1 décimale, 100 = 2 décimales. Définit la précision de l\'affichage.</string>
     <string name="header_save_files">Sauvegarde &amp; Fichiers</string>
     <string name="label_json_filename">Nom du fichier JSON</string>
     <string name="desc_json_filename">Nom du fichier utilisé pour stocker l\'historique des sessions.</string>
     <string name="label_dist_threshold">Seuil de distance (m)</string>
     <string name="desc_dist_threshold">Distance minimale entre deux points pour qu\'ils soient enregistrés.</string>
     <string name="label_recording_freq">Fréquence d\'enregistrement (Hz)</string>
-    <string name="desc_recording_freq">Nombre de points enregistrés par seconde (ex : 1.0 = 1 pt/sec).</string>
-
-    <!-- Map Markers & Info -->
-    <string name="marker_start">Départ</string>
-    <string name="marker_end">Arrivée</string>
-    <string name="marker_position">Position</string>
-    <string name="marker_point_format">Point n°%1$d</string>
-    <string name="marker_snippet_format">SOG : %1$.1f %2$s | COG : %3$.0f°</string>
+    <string name="desc_recording_freq">Nombre de points enregistrés par seconde (ex : 1.0 = 1 pt/s).</string>
 
     <!-- Accessibility / Generic -->
     <string name="content_desc_back">Retour</string>
     <string name="content_desc_recenter">Recentrer</string>
     <string name="content_desc_delete">Supprimer</string>
 
-    <!-- Map Layer Tags -->
+    <!-- Map Layers -->
     <string name="layer_topo">Topo</string>
     <string name="layer_precip">Précip.</string>
     <string name="layer_wind">Vent</string>
-    <string name="desc_wind_density">Nombre de Flèche Vectotiel</string>
-    <string name="label_wind_density">Wind density\n</string>
+    
+    <string name="desc_wind_density">Densité des flèches de vent sur la carte.</string>
+    <string name="label_wind_density">Densité du vent</string>
+
+    <string name="label_wind_arrow_size">Taille des flèches de vent</string>
+    <string name="desc_wind_arrow_size">Facteur d\'échelle pour le rendu des flèches (par défaut : 1.0)</string>
+
+    <string name="label_wind_ttl">Cache vent TTL (min)</string>
+    <string name="desc_wind_ttl">Durée de vie des données de vent en cache (par défaut : 10)</string>
+
+    <string name="label_wind_min_zoom">Niveau de zoom min</string>
+    <string name="desc_wind_min_zoom">Zoom minimal requis sur la carte pour afficher les flèches de vent</string>
 </resources>

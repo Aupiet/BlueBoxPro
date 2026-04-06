@@ -10,7 +10,6 @@ import android.graphics.Bitmap
 import android.graphics.Canvas as AndroidCanvas
 import android.graphics.Color as AndroidColor
 import android.graphics.Paint
-import android.graphics.drawable.BitmapDrawable
 import androidx.appcompat.content.res.AppCompatResources
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
@@ -203,30 +202,30 @@ object MapComponents {
                 Spacer(modifier = Modifier.width(16.dp))
                 Column(modifier = Modifier.weight(2.2f).fillMaxHeight(), verticalArrangement = Arrangement.Center) {
                     Column(modifier = Modifier.padding(bottom = 4.dp)) {
-                        CoordinateText("Latitude", LAT_LON_FORMAT.format(location?.latitude ?: 0.0), fontSize = 10.sp)
-                        CoordinateText("Altitude", "${STAT_FORMAT.format(result.getAltitude())} ${result.getAltitudeUnit()}", fontSize = 10.sp)
-                        CoordinateText("Longitude", LAT_LON_FORMAT.format(location?.longitude ?: 0.0), fontSize = 10.sp)
+                        CoordinateText(stringResource(R.string.label_latitude), LAT_LON_FORMAT.format(location?.latitude ?: 0.0), fontSize = 10.sp)
+                        CoordinateText(stringResource(R.string.altitude_label).removeSuffix(" :").removeSuffix(":"), "${STAT_FORMAT.format(result.getAltitude())} ${result.getAltitudeUnit()}", fontSize = 10.sp)
+                        CoordinateText(stringResource(R.string.label_longitude), LAT_LON_FORMAT.format(location?.longitude ?: 0.0), fontSize = 10.sp)
                     }
                     
                     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-                            CircularGaugeWithDirectionPoint("SOG (${result.getSpeedUnit()})", STAT_FORMAT.format(result.getSog()), emptyList(), 90, MaterialTheme.colorScheme.tertiary)
+                            CircularGaugeWithDirectionPoint(stringResource(R.string.label_sog_with_unit, result.getSpeedUnit()), STAT_FORMAT.format(result.getSog()), emptyList(), 90, MaterialTheme.colorScheme.tertiary)
                             val windS = weatherData?.currentWeather?.windSpeed?.let { 
                                 val conv = Converter.convertSpeed(it.toFloat() / 3.6f, unitSystem)
                                 STAT_FORMAT.format(conv)
                             } ?: "..."
-                            CircularGaugeWithDirectionPoint("VENT (${result.getSpeedUnit()})", windS, emptyList(), 90, MaterialTheme.colorScheme.tertiary)
+                            CircularGaugeWithDirectionPoint(stringResource(R.string.label_wind_speed_with_unit, result.getSpeedUnit()), windS, emptyList(), 90, MaterialTheme.colorScheme.tertiary)
                             val windD = weatherData?.currentWeather?.windDirection?.toFloat()
                             val dirPoints = mutableListOf<DirectionPoint>()
                             windD?.let { dirPoints.add(DirectionPoint(angle = it, color = MaterialTheme.colorScheme.error)) }
                             dirPoints.add(DirectionPoint(angle = result.getCog(), color = MaterialTheme.colorScheme.primary))
-                            CircularGaugeWithDirectionPoint("DIR. (°)", windD?.let { "${it.toInt()}" } ?: "...", dirPoints, 90, MaterialTheme.colorScheme.tertiary)
+                            CircularGaugeWithDirectionPoint(stringResource(R.string.label_direction_deg), windD?.let { "${it.toInt()}" } ?: "...", dirPoints, 90, MaterialTheme.colorScheme.tertiary)
                         }
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
                             val temp = weatherData?.currentWeather?.temperature?.let { "${it.toInt()}" } ?: "..."
-                            CircularGaugeWithDirectionPoint("TEMP (°C)", temp, emptyList(), 90, MaterialTheme.colorScheme.primary)
-                            CircularGaugeWithDirectionPoint("PITCH (°)", "${result.getPitch()}", emptyList(), 90, MaterialTheme.colorScheme.primary)
-                            CircularGaugeWithDirectionPoint("ROLL (°)", "${result.getRoll()}", emptyList(), 90, MaterialTheme.colorScheme.secondary)
+                            CircularGaugeWithDirectionPoint(stringResource(R.string.label_temp_celsius), temp, emptyList(), 90, MaterialTheme.colorScheme.primary)
+                            CircularGaugeWithDirectionPoint(stringResource(R.string.label_pitch_deg), "${result.getPitch()}", emptyList(), 90, MaterialTheme.colorScheme.primary)
+                            CircularGaugeWithDirectionPoint(stringResource(R.string.label_roll_deg), "${result.getRoll()}", emptyList(), 90, MaterialTheme.colorScheme.secondary)
                         }
                     }
                 }
@@ -240,30 +239,30 @@ object MapComponents {
                 }
                 Spacer(modifier = Modifier.height(16.dp))
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-                    Text(text = "Long: ${LAT_LON_FORMAT.format(location?.longitude ?: 0.0)}", style = MaterialTheme.typography.bodySmall.copy(fontSize = 9.sp))
-                    Text(text = "Lat: ${LAT_LON_FORMAT.format(location?.latitude ?: 0.0)}", style = MaterialTheme.typography.bodySmall.copy(fontSize = 9.sp))
-                    Text(text = "Alt: ${STAT_FORMAT.format(result.getAltitude())}", style = MaterialTheme.typography.bodySmall.copy(fontSize = 9.sp))
+                    Text(text = "${stringResource(R.string.label_lon)}: ${LAT_LON_FORMAT.format(location?.longitude ?: 0.0)}", style = MaterialTheme.typography.bodySmall.copy(fontSize = 9.sp))
+                    Text(text = "${stringResource(R.string.label_lat)}: ${LAT_LON_FORMAT.format(location?.latitude ?: 0.0)}", style = MaterialTheme.typography.bodySmall.copy(fontSize = 9.sp))
+                    Text(text = "${stringResource(R.string.label_alt)}: ${STAT_FORMAT.format(result.getAltitude())}", style = MaterialTheme.typography.bodySmall.copy(fontSize = 9.sp))
                 }
                 Spacer(modifier = Modifier.height(12.dp))
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-                        CircularGaugeWithDirectionPoint("SOG (${result.getSpeedUnit()})", STAT_FORMAT.format(result.getSog()), emptyList(), 78, MaterialTheme.colorScheme.primary)
+                        CircularGaugeWithDirectionPoint(stringResource(R.string.label_sog_with_unit, result.getSpeedUnit()), STAT_FORMAT.format(result.getSog()), emptyList(), 78, MaterialTheme.colorScheme.primary)
                         val windS = weatherData?.currentWeather?.windSpeed?.let { 
                             val conv = Converter.convertSpeed(it.toFloat() / 3.6f, unitSystem)
                             STAT_FORMAT.format(conv)
                         } ?: "..."
-                        CircularGaugeWithDirectionPoint("VENT (${result.getSpeedUnit()})", windS, emptyList(), 78, MaterialTheme.colorScheme.tertiary)
+                        CircularGaugeWithDirectionPoint(stringResource(R.string.label_wind_speed_with_unit, result.getSpeedUnit()), windS, emptyList(), 78, MaterialTheme.colorScheme.tertiary)
                         val windD = weatherData?.currentWeather?.windDirection?.toFloat()
                         val dirPoints = mutableListOf<DirectionPoint>()
                         windD?.let { dirPoints.add(DirectionPoint(angle = it, color = MaterialTheme.colorScheme.error)) }
                         dirPoints.add(DirectionPoint(angle = result.getCog(), color = MaterialTheme.colorScheme.secondary))
-                        CircularGaugeWithDirectionPoint("DIR. (°)", windD?.let { "${it.toInt()}" } ?: "...", dirPoints, 78, MaterialTheme.colorScheme.tertiary)
+                        CircularGaugeWithDirectionPoint(stringResource(R.string.label_direction_deg), windD?.let { "${it.toInt()}" } ?: "...", dirPoints, 78, MaterialTheme.colorScheme.tertiary)
                     }
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-                        CircularGaugeWithDirectionPoint("PITCH (°)", "${result.getPitch()}", emptyList(), 78, MaterialTheme.colorScheme.primary)
-                        CircularGaugeWithDirectionPoint("ROLL (°)", "${result.getRoll()}", emptyList(), 78, MaterialTheme.colorScheme.secondary)
+                        CircularGaugeWithDirectionPoint(stringResource(R.string.label_pitch_deg), "${result.getPitch()}", emptyList(), 78, MaterialTheme.colorScheme.primary)
+                        CircularGaugeWithDirectionPoint(stringResource(R.string.label_roll_deg), "${result.getRoll()}", emptyList(), 78, MaterialTheme.colorScheme.secondary)
                         val temp = weatherData?.currentWeather?.temperature?.let { "${it.toInt()}" } ?: "..."
-                        CircularGaugeWithDirectionPoint("TEMP (°C)", temp, emptyList(), 78, MaterialTheme.colorScheme.primary)
+                        CircularGaugeWithDirectionPoint(stringResource(R.string.label_temp_celsius), temp, emptyList(), 78, MaterialTheme.colorScheme.primary)
                     }
                 }
             }
