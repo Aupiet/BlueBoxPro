@@ -21,8 +21,15 @@ enum class ThemePalette(val displayName: String) {
                 onPrimary = Color.White,
                 onSecondary = Color.White,
                 onTertiary = Color.White,
-                onBackground = OceanOnBackgroundLight,
-                onSurface = OceanOnSurfaceLight
+                onBackground = OceanOnSurfaceLight,
+                onSurface = OceanOnSurfaceLight,
+                primaryContainer = NautixBlueOcean.copy(alpha = 0.1f),
+                secondaryContainer = NautixBlueAzure.copy(alpha = 0.15f),
+                tertiaryContainer = NautixOrangeCoral.copy(alpha = 0.1f),
+                onPrimaryContainer = OceanPrimaryLight,
+                onSecondaryContainer = OceanSecondaryLight,
+                onTertiaryContainer = OceanTertiaryLight,
+                surfaceVariant = Color(0xFFF2F4F5) // Light gray variant
             )
             SUNSET -> lightColorScheme(
                 primary = SunsetPrimaryLight,
@@ -63,7 +70,13 @@ enum class ThemePalette(val displayName: String) {
                 onSecondary = OceanOnSecondaryDark,
                 onTertiary = OceanOnTertiaryDark,
                 onBackground = OceanOnBackgroundDark,
-                onSurface = OceanOnSurfaceDark
+                onSurface = OceanOnSurfaceDark,
+                primaryContainer = NautixBlueOcean,
+                secondaryContainer = NautixBlueAzure.copy(alpha = 0.3f),
+                tertiaryContainer = NautixOrangeCoral.copy(alpha = 0.3f),
+                onPrimaryContainer = Color.White,
+                onSecondaryContainer = Color.White,
+                onTertiaryContainer = Color.White
             )
             SUNSET -> darkColorScheme(
                 primary = SunsetPrimaryDark,
